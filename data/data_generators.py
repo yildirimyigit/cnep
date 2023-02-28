@@ -5,7 +5,7 @@ def generate_cx_sigm(x):
     c1 = torch.rand(len(x)) * 1 + 7 #* torch.from_numpy(np.random.choice([-1, 1], (n, 1)))  # c1 for steepness
     c2 = 0.5  # c2 midpoint
     
-    data = 1/(1 + torch.exp(-c1 * (x-c2)))
+    data = 1/(1 + torch.exp(-c1 * (x-c2))) + torch.clamp(torch.randn(len(x))*1e-2**0.5, min=0)
     return data
 
 
@@ -14,12 +14,12 @@ def generate_reverse_cx_sigm(x):
 
 
 def generate_sin(x, amp=1, omega=1, eps=0.1):
-    noise = torch.clamp(torch.randn(len(x))*1e-4**0.5, min=0)
+    noise = torch.clamp(torch.randn(len(x))*1e-2**0.5, min=0)
     return torch.sin(x*torch.pi) + noise
 
 
 def generate_cos(x, amp=1, omega=1, eps=0.1):
-    noise = torch.clamp(torch.randn(len(x))*1e-4**0.5, min=0)
+    noise = torch.clamp(torch.randn(len(x))*1e-2**0.5, min=0)
     return torch.cos((0.5+x)*torch.pi) + 1 + noise
 
 def generate_chainsaw(x, amp=1, mod=0.5, eps=0.1):
