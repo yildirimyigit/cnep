@@ -19,8 +19,8 @@ else:
 # In[2]:
 
 
-x = torch.from_numpy(np.load('/home/yigit/projects/mbcnp/data/raw/dataverse_files/Sines_full/constrained_torques.npy'))[:50]
-y = torch.from_numpy(np.load('/home/yigit/projects/mbcnp/data/raw/dataverse_files/Sines_full/measured_angles.npy'))[:50]
+x = torch.from_numpy(np.load('/clusterusers/yigit.yildirim@boun.edu.tr/projects/mbcnp/data/raw/dataverse_files/Sines_full/constrained_torques.npy'))[:50]
+y = torch.from_numpy(np.load('/clusterusers/yigit.yildirim@boun.edu.tr/projects/mbcnp/data/raw/dataverse_files/Sines_full/measured_angles.npy'))[:50]
 # print(x.shape, y.shape)
 
 
@@ -29,8 +29,8 @@ y = torch.from_numpy(np.load('/home/yigit/projects/mbcnp/data/raw/dataverse_file
 
 batch_size = 16
 
-model = CNP(3, 512, 3, 500, 500, 4, batch_size).to(device)
-optimizer = torch.optim.Adam(lr=1e-4, params=model.parameters())
+model = CNP(3, 1024, 3, 1000, 1000, 5, batch_size).to(device)
+optimizer = torch.optim.Adam(lr=3e-4, params=model.parameters())
 
 
 # In[4]:
@@ -99,7 +99,7 @@ for epoch in range(epochs):
 
 t_or_r = True  # test on traj or get latent representations
 
-model = CNP(3, 512, 3, 250, 250, 3, 8).to(device)
+model = CNP(3, 1024, 3, 1000, 1000, 5, batch_size).to(device)
 model.load_state_dict(torch.load('best_test_on_rrd.pt'))
 model.eval()
 if t_or_r:
@@ -139,6 +139,7 @@ if t_or_r:
     axs[0, 1].plot(y[traj_id, :, 1], c='r', alpha=0.7)
     axs[1, 0].plot(trj[0, :, 2], c='c')
     axs[1, 0].plot(y[traj_id, :, 2], c='g', alpha=0.7)
+    fig.savefig('fig.png')
 else:
     colors = ["b", "r", "g", "y"]
 

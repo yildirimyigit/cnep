@@ -1,3 +1,5 @@
 __pycache__/
 *.pt
 data/raw/
+result.out
+run_on_hpc.sh
