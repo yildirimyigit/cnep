@@ -40,7 +40,7 @@ class CNP(nn.Module):
         repeated_encoded_rep = torch.repeat_interleave(encoded_rep, tar.shape[1], dim=1)  # each encoded_rep is repeated to match tar
         rep_tar = torch.cat([repeated_encoded_rep, tar], dim=-1)
         
-        pred = self.decoder(rep_tar)
+        pred = self.decoder(rep_tar)  # (batch_size, n_t (<n_max_tar), 2*output_dim)
         
         return pred, encoded_rep
 
