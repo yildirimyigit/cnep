@@ -15,6 +15,8 @@ class WTA_CNP(nn.Module):
         self.decoder_num_layers = len(decoder_hidden_dims)
         self.batch_size = batch_size
 
+        self.doubt_coef, self.entropy_coef = self.calculate_coef()
+
         encoder_layers = []
         for i in range(self.encoder_num_layers-1):
             if i == 0:
@@ -26,14 +28,17 @@ class WTA_CNP(nn.Module):
         self.encoder = nn.Sequential(*encoder_layers)
 
         decoder_layers = []
-        for i in range(self.decoder_num_layers-1):
-            if i == 0:
-                decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[i]))
-            else:
-                decoder_layers.append(nn.Linear(decoder_hidden_dims[i-1], decoder_hidden_dims[i]))
-            decoder_layers.append(nn.ReLU())
-        decoder_layers.append(nn.Linear(decoder_hidden_dims[-1], output_dim*2))
+        if self.decoder_num_layers > 1:
+            for i in range(self.decoder_num_layers-1):
+                if i == 0:
+                    decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[i]))
+                else:
+                    decoder_layers.append(nn.Linear(decoder_hidden_dims[i-1], decoder_hidden_dims[i]))
+                decoder_layers.append(nn.ReLU())
+        else:
+            decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[0]))
 
+        decoder_layers.append(nn.Linear(decoder_hidden_dims[-1], output_dim*2))
         self.decoders = nn.ModuleList([nn.Sequential(*decoder_layers) for _ in range(num_decoders)])
 
         self.gate = nn.Sequential(
@@ -70,11 +75,39 @@ class WTA_CNP(nn.Module):
         dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
 
         #############
-
-        nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size)
+        # Actual loss
+        nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
 
         #############
+        # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction
+        doubt = (torch.prod(gate_vals, dim=-1)*1e3).mean()  # scalar
 
-        doubt = torch.prod(gate_vals, dim=1).mean()  # scalar
+        #############
+        # Overall entropy. We want to increase entropy; i.e. the model should use all decoders not just one
+        entropy = torch.distributions.Categorical(probs=torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)).entropy()  # scalar
 
-        return nll + doubt
+        return nll + doubt*self.doubt_coef - entropy*self.entropy_coef
+    
+    def calculate_coef(self):
+        # Doubt and entropy need to be scaled
+
+        # Doubt coefficient, best: [1, 0, ..., 0], worst: [1/num_decoders, ..., 1/num_decoders]
+        good_individual, bad_individual = torch.eye(1, self.num_decoders), torch.ones(1, self.num_decoders)/self.num_decoders
+        doubt_min, doubt_max = torch.prod(good_individual).mean(), torch.prod(bad_individual).mean()
+
+        doubt_coef = 1/(doubt_max - doubt_min)
+
+        # Entropy coefficient, best: [1/num_decoders, ..., 1/num_decoders], worst: [1, 0, ..., 0]
+        good_gate_distr, bad_gate_distr = torch.ones(1, self.num_decoders)/self.num_decoders, torch.eye(1, self.num_decoders)
+        entropy_max, entropy_min = torch.distributions.Categorical(probs=good_gate_distr).entropy(), torch.distributions.Categorical(probs=bad_gate_distr).entropy()
+        
+        entropy_coef = 1/(entropy_max - entropy_min)
+
+        return doubt_coef, entropy_coef
+    
+    def to(self, device):
+        new_self = super(WTA_CNP, self).to(device)
+        new_self.doubt_coef = new_self.doubt_coef.to(device)
+        new_self.entropy_coef = new_self.entropy_coef.to(device)
+
+        return new_self
