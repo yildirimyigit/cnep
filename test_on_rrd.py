@@ -42,9 +42,9 @@ def get_batch(x, y, traj_ids):
     n_t = torch.randint(1, model.n_max_tar, (1,)).item()
     n_o = torch.randint(1, model.n_max_obs, (1,)).item()
 
-    obs = torch.zeros(batch_size, n_o, dx+dy).to(device)
-    tar = torch.zeros(batch_size, n_t, dx).to(device)
-    tar_val = torch.zeros(batch_size, n_t, dy).to(device)
+    obs = torch.zeros(batch_size, n_o, dx+dy, device=device)
+    tar = torch.zeros(batch_size, n_t, dx, device=device)
+    tar_val = torch.zeros(batch_size, n_t, dy, device=device)
 
     for i in range(len(traj_ids)):
         random_query_ids = torch.randperm(n)
