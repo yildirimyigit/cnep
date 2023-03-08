@@ -15,7 +15,7 @@ class WTA_CNP(nn.Module):
         self.decoder_num_layers = len(decoder_hidden_dims)
         self.batch_size = batch_size
 
-        self.doubt_coef, self.entropy_coef = self.calculate_coef()
+        self.doubt_coef, self.entropy_coef, self.gate_std_coef = self.calculate_coef()
 
         encoder_layers = []
         for i in range(self.encoder_num_layers-1):
@@ -80,13 +80,18 @@ class WTA_CNP(nn.Module):
 
         #############
         # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction
-        doubt = (torch.prod(gate_vals, dim=-1)*1e3).mean()  # scalar
+        doubt = (torch.prod(gate_vals, dim=-1)).mean()  # scalar
 
         #############
         # Overall entropy. We want to increase entropy; i.e. the model should use all decoders not just one
-        entropy = torch.distributions.Categorical(probs=torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)).entropy()  # scalar
+        gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
+        entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
 
-        return nll + doubt*self.doubt_coef - entropy*self.entropy_coef
+        #############
+        # Gate std: sometimes all gates are the same, we want to penalize low std
+        gate_std = torch.std(gate_vals)
+
+        return nll + doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef
     
     def calculate_coef(self):
         # Doubt and entropy need to be scaled
@@ -103,11 +108,20 @@ class WTA_CNP(nn.Module):
         
         entropy_coef = 1/(entropy_max - entropy_min)
 
-        return doubt_coef, entropy_coef
+        # Gate std coefficient, best: eye(num_decoders, num_decoder).repeat(batch_size//num_decoders, 1), worst: 1
+        good_gate_distr = torch.eye(self.num_decoders, self.num_decoders).repeat(self.batch_size//self.num_decoders, 1)
+        bad_gate_distr = torch.ones_like(good_gate_distr)/self.num_decoders
+
+        gate_std_max, gate_std_min = torch.std(good_gate_distr), torch.std(bad_gate_distr)
+        gate_std_coef = 1/(gate_std_max - gate_std_min)
+
+        return doubt_coef, entropy_coef, gate_std_coef
     
+    # Overloaded to() method to also move doubt_coef, entropy_coef and gate_std_coef
     def to(self, device):
         new_self = super(WTA_CNP, self).to(device)
         new_self.doubt_coef = new_self.doubt_coef.to(device)
         new_self.entropy_coef = new_self.entropy_coef.to(device)
+        new_self.gate_std_coef = new_self.gate_std_coef.to(device)
 
         return new_self
