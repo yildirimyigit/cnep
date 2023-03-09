@@ -3,3 +3,5 @@ __pycache__/
 data/raw/
 result.out
 run_on_hpc.sh
+.ipynb_checkpoints/
+dum_test.ipynb
