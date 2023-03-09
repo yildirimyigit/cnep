@@ -1,7 +1,7 @@
 __pycache__/
 *.pt
 data/raw/
-result.out
-run_on_hpc.sh
+*.out
+*.sh
 .ipynb_checkpoints/
 dum_test.ipynb
