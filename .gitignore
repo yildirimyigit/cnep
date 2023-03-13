@@ -5,3 +5,4 @@ data/raw/
 *.sh
 .ipynb_checkpoints/
 dum_test.ipynb
+saved_models/

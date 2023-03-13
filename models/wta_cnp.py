@@ -79,7 +79,7 @@ class WTA_CNP(nn.Module):
         nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
 
         #############
-        # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction
+        # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt
         doubt = (torch.prod(gate_vals, dim=-1)).mean()  # scalar
 
         #############
@@ -88,13 +88,13 @@ class WTA_CNP(nn.Module):
         entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
 
         #############
-        # Gate std: sometimes all gates are the same, we want to penalize low std
+        # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         gate_std = torch.std(gate_vals)
 
         return nll + doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef
     
     def calculate_coef(self):
-        # Doubt and entropy need to be scaled
+        # Doubt, entropy and std need to be scaled
 
         # Doubt coefficient, best: [1, 0, ..., 0], worst: [1/num_decoders, ..., 1/num_decoders]
         good_individual, bad_individual = torch.eye(1, self.num_decoders), torch.ones(1, self.num_decoders)/self.num_decoders
