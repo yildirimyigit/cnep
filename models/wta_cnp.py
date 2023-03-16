@@ -91,7 +91,7 @@ class WTA_CNP(nn.Module):
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         gate_std = torch.std(gate_vals)
 
-        return nll + doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef
+        return 5*nll + 0.1*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef)  # 5, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
         # Doubt, entropy and std need to be scaled
