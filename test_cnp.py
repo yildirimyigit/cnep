@@ -11,7 +11,7 @@ else:
 
 # %%
 # Data generation
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 dx = 1
 t_steps = 200

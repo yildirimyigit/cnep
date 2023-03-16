@@ -1,6 +1,5 @@
 # %%
 import torch
-import matplotlib.pyplot as plt
 
 from models.wta_cnp import WTA_CNP
 from data.data_generators import *
@@ -47,12 +46,12 @@ x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 
-for i in range(num_indiv):
-    plt.plot(x[i, :, 0], y[i, :, 0], 'r', alpha=0.3)
-    plt.plot(x[i+num_indiv, :, 0], y[i+num_indiv, :, 0], 'g', alpha=0.3)
-    plt.plot(x[i+2*num_indiv, :, 0], y[i+2*num_indiv, :, 0], 'b', alpha=0.3)
-    plt.plot(x[i+3*num_indiv, :, 0], y[i+3*num_indiv, :, 0], 'magenta', alpha=0.3)
-plt.show()
+#for i in range(num_indiv):
+#    plt.plot(x[i, :, 0], y[i, :, 0], 'r', alpha=0.3)
+#    plt.plot(x[i+num_indiv, :, 0], y[i+num_indiv, :, 0], 'g', alpha=0.3)
+#    plt.plot(x[i+2*num_indiv, :, 0], y[i+2*num_indiv, :, 0], 'b', alpha=0.3)
+#    plt.plot(x[i+3*num_indiv, :, 0], y[i+3*num_indiv, :, 0], 'magenta', alpha=0.3)
+#plt.show()
 
 x, y = x.to(device), y.to(device)
 
