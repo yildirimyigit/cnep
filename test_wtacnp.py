@@ -44,7 +44,7 @@ for i in range(num_classes):
 
 x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
-print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
+#print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 
 #for i in range(num_indiv):
 #    plt.plot(x[i, :, 0], y[i, :, 0], 'r', alpha=0.3)
@@ -103,6 +103,8 @@ min_val_loss = 1000000
 
 mse_loss = torch.nn.MSELoss()
 
+training_loss, validation_error = [], []
+
 for epoch in range(epochs):
     epoch_loss = 0
 
@@ -118,6 +120,8 @@ for epoch in range(epochs):
 
         epoch_loss += loss.item()
 
+    training_loss.append(epoch_loss)
+
     if epoch % val_per_epoch == 0:
         o, t, tr = get_validation_batch(vx, vy)
 
@@ -127,7 +131,7 @@ for epoch in range(epochs):
             dec_id = torch.argmax(g.squeeze(1), dim=-1)
             vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
             val_loss = mse_loss(vp_means, tr).item()
-
+            validation_error.append(val_loss)
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 print(f'New best: {min_val_loss}')
@@ -139,6 +143,9 @@ for epoch in range(epochs):
         print("Epoch: {}, Loss: {}".format(epoch, avg_loss/100))
         avg_loss = 0
 
+    if epoch % 100000:
+        torch.save(torch.Tensor(training_loss), 'training_loss.pt')
+        torch.save(torch.Tensor(validation_error), 'validation_error.pt')
 
 # %%
 # Testing the best model

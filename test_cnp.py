@@ -37,8 +37,8 @@ y = torch.stack(y, dim=0).to(device)
 vx, vy = x[num_train_per_class*num_classes:], y[num_train_per_class*num_classes:]
 x, y = x[:num_train_per_class*num_classes], y[:num_train_per_class*num_classes]
 
-print(x.shape, y.shape)
-print(vx.shape, vy.shape)
+#print(x.shape, y.shape)
+#print(vx.shape, vy.shape)
 
 # %%
 batch_size = 32
@@ -93,6 +93,8 @@ min_val_loss = 1000000
 
 mse_loss = torch.nn.MSELoss()
 
+training_loss, validation_error = [], []
+
 for epoch in range(epochs):
     epoch_loss = 0
 
@@ -108,11 +110,14 @@ for epoch in range(epochs):
 
         epoch_loss += loss.item()
 
+    training_loss.append(epoch_loss)
+
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
             obs, tar_x, tar_y = get_validation_batch(vx, vy)
             pred, encoded_rep = model(obs, tar_x)
             val_loss = mse_loss(pred[:, :, :model.output_dim], tar_y)
+            validation_error.append(val_loss.item())
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 print(f'New best: {min_val_loss}')
@@ -123,6 +128,10 @@ for epoch in range(epochs):
     if epoch % 100 == 0:
         print("Epoch: {}, Loss: {}".format(epoch, avg_loss/100))
         avg_loss = 0
+
+    if epoch % 100000:
+        torch.save(torch.Tensor(training_loss), 'training_loss.pt')
+        torch.save(torch.Tensor(validation_error), 'validation_error.pt')
 
 # %%
 
