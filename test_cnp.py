@@ -95,6 +95,9 @@ mse_loss = torch.nn.MSELoss()
 
 training_loss, validation_error = [], []
 
+tr_loss_path = f'training_loss_{file_name}.pt'
+val_err_path = f'validation_error_{file_name}.pt'
+
 for epoch in range(epochs):
     epoch_loss = 0
 
@@ -130,8 +133,8 @@ for epoch in range(epochs):
         avg_loss = 0
 
     if epoch % 100000:
-        torch.save(torch.Tensor(training_loss), 'training_loss.pt')
-        torch.save(torch.Tensor(validation_error), 'validation_error.pt')
+        torch.save(torch.Tensor(training_loss), tr_loss_path)
+        torch.save(torch.Tensor(validation_error), val_err_path)
 
 # %%
 
