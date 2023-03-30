@@ -105,8 +105,8 @@ mse_loss = torch.nn.MSELoss()
 
 training_loss, validation_error = [], []
 
-tr_loss_path = f'training_loss_{file_name}.pt'
-val_err_path = f'validation_error_{file_name}.pt'
+tr_loss_path = f'wta_training_loss_{file_name}.pt'
+val_err_path = f'wta_validation_error_{file_name}.pt'
 
 
 for epoch in range(epochs):
