@@ -7,7 +7,7 @@ import torch
 
 if torch.cuda.is_available():
     device_wta = torch.device("cuda:0")
-    device_cnp = torch.device("cuda:1")
+    device_cnp = torch.device("cuda:0")
 else:
     device0 = torch.device("cpu")
 
@@ -107,8 +107,8 @@ wta_val_err_path = f'wta_validation_error_{file_name}.pt'
 cnp_tr_loss_path = f'cnp_training_loss_{file_name}.pt'
 cnp_val_err_path = f'cnp_validation_error_{file_name}.pt'
 
-o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, device_wta)
-o_cnp, t_cnp, tr_cnp = get_validation_batch(vx, vy, device_cnp)
+o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, device=device_wta)
+o_cnp, t_cnp, tr_cnp = get_validation_batch(vx, vy, device=device_cnp)
 
 for epoch in range(epochs):
     epoch_loss_wta, epoch_loss_cnp = 0, 0
@@ -173,6 +173,9 @@ for epoch in range(epochs):
         torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
         torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
         torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
+
+
+# %%
 
 
 
