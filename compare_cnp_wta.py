@@ -7,9 +7,10 @@ import torch
 
 if torch.cuda.is_available():
     device_wta = torch.device("cuda:0")
-    device_cnp = torch.device("cuda:0")
+    device_cnp = torch.device("cuda:1") if torch.cuda.device_count() > 1 else torch.device("cuda:0")
 else:
-    device0 = torch.device("cpu")
+    device_wta = torch.device("cpu")
+    device_cnp = torch.device("cpu")
 
 # %%
 batch_size = 32
@@ -149,7 +150,7 @@ for epoch in range(epochs):
             validation_error_wta.append(val_loss_wta)
             if val_loss_wta < min_val_loss_wta:
                 min_val_loss_wta = val_loss_wta
-                print(f'New best: {min_val_loss_wta}')
+                print(f'(WTA)New best: {min_val_loss_wta}')
                 torch.save(model_wta.state_dict(), f'saved_models/wta_on_synth_{file_name}.pt')
 
             pred_cnp, encoded_rep = model_cnp(o_cnp, t_cnp)
@@ -157,7 +158,7 @@ for epoch in range(epochs):
             validation_error_cnp.append(val_loss_cnp.item())
             if val_loss_cnp < min_val_loss_cnp:
                 min_val_loss_cnp = val_loss_cnp
-                print(f'New best: {min_val_loss_cnp}')
+                print(f'(CNP)New best: {min_val_loss_cnp}')
                 torch.save(model_cnp.state_dict(), f'saved_models/cnp_on_synth_{file_name}.pt')
 
 
@@ -165,7 +166,7 @@ for epoch in range(epochs):
     avg_loss_cnp += epoch_loss_cnp
 
     if epoch % 100 == 0:
-        print("Epoch: {}, WTA-Loss: {}, , CNP-Loss: {}".format(epoch, avg_loss_wta/100, avg_loss_cnp/100))
+        print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/100, avg_loss_cnp/100))
         avg_loss_wta, avg_loss_cnp = 0, 0
 
     if epoch % 100000:
