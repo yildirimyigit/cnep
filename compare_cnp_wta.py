@@ -126,7 +126,7 @@ for epoch in range(epochs):
         pred_wta, gate_wta = model_wta(obs_wta, tar_x_wta)
         pred_cnp, encoded_rep_cnp = model_cnp(obs_cnp, tar_x_cnp)
 
-        loss_wta = model_wta.loss(pred_wta, gate_wta, tar_y_wta)
+        loss_wta, wta_nll = model_wta.loss(pred_wta, gate_wta, tar_y_wta)
         loss_wta.backward()
         optimizer_wta.step()
 
@@ -134,7 +134,7 @@ for epoch in range(epochs):
         loss_cnp.backward()
         optimizer_cnp.step()
 
-        epoch_loss_wta += loss_wta.item()
+        epoch_loss_wta += wta_nll.item()
         epoch_loss_cnp += loss_cnp.item()
 
     training_loss_wta.append(epoch_loss_wta)
