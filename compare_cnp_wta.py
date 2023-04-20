@@ -88,10 +88,19 @@ optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
 # %%
 import time
+import os
 
-file_name = int(time.time())
+timestamp = int(time.time())
+root_folder = f'outputs/{str(timestamp)}/'
 
-epochs = 5000000
+if not os.path.exists(root_folder):
+    os.makedirs(root_folder)
+
+if not os.path.exists(f'{root_folder}saved_models/'):
+    os.makedirs(f'{root_folder}saved_models/')
+
+
+epochs = 1000000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 avg_loss_wta, avg_loss_cnp = 0, 0
 
@@ -103,10 +112,10 @@ mse_loss = torch.nn.MSELoss()
 training_loss_wta, validation_error_wta = [], []
 training_loss_cnp, validation_error_cnp = [], []
 
-wta_tr_loss_path = f'wta_training_loss_{file_name}.pt'
-wta_val_err_path = f'wta_validation_error_{file_name}.pt'
-cnp_tr_loss_path = f'cnp_training_loss_{file_name}.pt'
-cnp_val_err_path = f'cnp_validation_error_{file_name}.pt'
+wta_tr_loss_path = f'{root_folder}wta_training_loss.pt'
+wta_val_err_path = f'{root_folder}wta_validation_error.pt'
+cnp_tr_loss_path = f'{root_folder}cnp_training_loss.pt'
+cnp_val_err_path = f'{root_folder}cnp_validation_error.pt'
 
 o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, device=device_wta)
 o_cnp, t_cnp, tr_cnp = get_validation_batch(vx, vy, device=device_cnp)
@@ -151,7 +160,7 @@ for epoch in range(epochs):
             if val_loss_wta < min_val_loss_wta:
                 min_val_loss_wta = val_loss_wta
                 print(f'(WTA)New best: {min_val_loss_wta}')
-                torch.save(model_wta.state_dict(), f'saved_models/wta_on_synth_{file_name}.pt')
+                torch.save(model_wta.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
 
             pred_cnp, encoded_rep = model_cnp(o_cnp, t_cnp)
             val_loss_cnp = mse_loss(pred_cnp[:, :, :model_cnp.output_dim], tr_cnp)
@@ -159,7 +168,7 @@ for epoch in range(epochs):
             if val_loss_cnp < min_val_loss_cnp:
                 min_val_loss_cnp = val_loss_cnp
                 print(f'(CNP)New best: {min_val_loss_cnp}')
-                torch.save(model_cnp.state_dict(), f'saved_models/cnp_on_synth_{file_name}.pt')
+                torch.save(model_cnp.state_dict(), f'{root_folder}saved_models/cnp_on_synth.pt')
 
 
     avg_loss_wta += epoch_loss_wta
