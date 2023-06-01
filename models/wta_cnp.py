@@ -27,19 +27,23 @@ class WTA_CNP(nn.Module):
         encoder_layers.append(nn.Linear(encoder_hidden_dims[-2], encoder_hidden_dims[-1]))
         self.encoder = nn.Sequential(*encoder_layers)
 
-        decoder_layers = []
-        if self.decoder_num_layers > 1:
-            for i in range(self.decoder_num_layers-1):
-                if i == 0:
-                    decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[i]))
-                else:
-                    decoder_layers.append(nn.Linear(decoder_hidden_dims[i-1], decoder_hidden_dims[i]))
-                decoder_layers.append(nn.ReLU())
-        else:
-            decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[0]))
+        self.decoders = nn.ModuleList()
 
-        decoder_layers.append(nn.Linear(decoder_hidden_dims[-1], output_dim*2))
-        self.decoders = nn.ModuleList([nn.Sequential(*decoder_layers) for _ in range(num_decoders)])
+        #TODO: fix (look at the decoder structure when num_layers=2 and num_layers=1. They produce the same network)
+        for _ in range(num_decoders):
+            decoder_layers = []
+            if self.decoder_num_layers > 1:
+                for i in range(self.decoder_num_layers-1):
+                    if i == 0:
+                        decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[i]))
+                    else:
+                        decoder_layers.append(nn.Linear(decoder_hidden_dims[i-1], decoder_hidden_dims[i]))
+                    decoder_layers.append(nn.ReLU())
+            else:
+                decoder_layers.append(nn.Linear(encoder_hidden_dims[-1]+input_dim, decoder_hidden_dims[0]))
+
+            decoder_layers.append(nn.Linear(decoder_hidden_dims[-1], output_dim*2))  # 2 for mean and std
+            self.decoders.append(nn.Sequential(*decoder_layers))
 
         self.gate = nn.Sequential(
             nn.Linear(encoder_hidden_dims[-1], num_decoders),
