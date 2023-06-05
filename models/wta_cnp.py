@@ -54,18 +54,20 @@ class WTA_CNP(nn.Module):
         # obs: (batch_size, n_o (<n_max_obs), input_dim+output_dim)
         # tar: (batch_size, n_t (<n_max_tar), input_dim)
         n_t = tar.shape[1]
+        
         encoded_obs = self.encoder(obs)  # (batch_size, n_o (<n_max_obs), hidden_dim)
+
         encoded_rep = encoded_obs.mean(dim=1).unsqueeze(1)  # (batch_size, 1, hidden_dim)
         repeated_encoded_rep = torch.repeat_interleave(encoded_rep, n_t, dim=1)  # each encoded_rep is repeated to match tar
         rep_tar = torch.cat([repeated_encoded_rep, tar], dim=-1)
-        
+
         pred = torch.zeros(self.num_decoders, self.batch_size, n_t, self.output_dim*2, device=tar.device)  # tar is used to get device
 
         for i in range(self.num_decoders):
             pred[i] = self.decoders[i](rep_tar)
 
         gate_vals = self.gate(encoded_rep)  # (batch_size, num_decoders)
-        
+
         return pred, gate_vals
 
     def loss(self, pred, gate_vals, real):
@@ -87,7 +89,7 @@ class WTA_CNP(nn.Module):
         doubt = (torch.prod(gate_vals, dim=-1)).mean()  # scalar
 
         #############
-        # Overall entropy. We want to increase entropy; i.e. the model should use all decoders not just one
+        # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
         gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
         entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
 
@@ -95,7 +97,8 @@ class WTA_CNP(nn.Module):
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         gate_std = torch.std(gate_vals)
 
-        return 5*nll + 0.1*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 5, 0.1 for increasing the importance of nll
+        return 3*nll + 0.1*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+        # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
         # Doubt, entropy and std need to be scaled
@@ -113,8 +116,13 @@ class WTA_CNP(nn.Module):
         entropy_coef = 1/(entropy_max - entropy_min)
 
         # Gate std coefficient, best: eye(num_decoders, num_decoder).repeat(batch_size//num_decoders, 1), worst: 1
-        good_gate_distr = torch.eye(self.num_decoders, self.num_decoders).repeat(self.batch_size//self.num_decoders, 1)
-        bad_gate_distr = torch.ones_like(good_gate_distr)/self.num_decoders
+        if self.batch_size > self.num_decoders:
+            good_gate_distr = torch.eye(self.num_decoders, self.num_decoders).repeat(self.batch_size//self.num_decoders, 1)
+            bad_gate_distr = torch.ones_like(good_gate_distr)/self.num_decoders
+
+        else:
+            good_gate_distr = torch.eye(self.batch_size, self.num_decoders)
+            bad_gate_distr = torch.ones_like(good_gate_distr)/self.num_decoders
 
         gate_std_max, gate_std_min = torch.std(good_gate_distr), torch.std(bad_gate_distr)
         gate_std_coef = 1/(gate_std_max - gate_std_min)
