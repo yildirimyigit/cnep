@@ -83,7 +83,7 @@ def get_validation_batch(vx, vy, o_ids=[0, -1], device=device_wta):
 model_wta = WTA_CNP(1, 1, 10, 10, [256, 256, 256], 4, [128, 128], 32).to(device_wta)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-model_cnp = CNP(input_dim=1, hidden_dim=287, output_dim=1, n_max_obs=10, n_max_tar=10, num_layers=2, batch_size=batch_size).to(device_cnp)
+model_cnp = CNP(input_dim=1, hidden_dim=314, output_dim=1, n_max_obs=10, n_max_tar=10, num_layers=2, batch_size=batch_size).to(device_cnp)
 optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
 # %%
