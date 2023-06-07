@@ -40,8 +40,8 @@ coeff = (torch.rand(num_indiv)*0.75+0.25).unsqueeze(-1)
 y[:num_indiv] = torch.unsqueeze(generate_sin(x)*coeff + noise, 2)
 y[num_indiv:] = -1 * y[:num_indiv]
 
-coeff = (torch.rand(num_val_indiv)*0.75+0.25).unsqueeze(-1)
-noise = torch.clamp(torch.randn(vx.shape)*1e-7**0.5, min=0) - noise_clip
+# coeff = (torch.rand(num_val_indiv)*0.75+0.25).unsqueeze(-1)
+noise = torch.clamp(torch.randn(vx.shape)*1e-4**0.5, min=0) - noise_clip
 vy[:num_val_indiv] = torch.unsqueeze(generate_sin(vx)*coeff + noise, 2)
 vy[num_val_indiv:] = -1 * vy[:num_val_indiv]
 
@@ -53,7 +53,8 @@ from matplotlib import pyplot as plt
 
 for i in range(num_demos):
     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), colors[i//num_indiv])
-
+    plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k')
+    
 
 x0, y0 = x.to(device_wta), y.to(device_wta)
 x1, y1 = x.to(device_cnp), y.to(device_cnp)
@@ -147,7 +148,7 @@ wta_val_err_path = f'{root_folder}wta_validation_error.pt'
 cnp_tr_loss_path = f'{root_folder}cnp_training_loss.pt'
 cnp_val_err_path = f'{root_folder}cnp_validation_error.pt'
 
-o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, device=device_wta)
+o_wta, t_wta, tr_wta = get_validation_batch(vx, vy,device=device_wta)
 o_cnp, t_cnp, tr_cnp = get_validation_batch(vx, vy, device=device_cnp)
 
 for epoch in range(epochs):
