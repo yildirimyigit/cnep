@@ -37,3 +37,15 @@ def generate_reverse_chainsaw(x:torch.Tensor, amp=1, mod=0.5, eps=0.1):
     r2 = torch.rand(1)*(eps*2)+(1-eps)
     r3 = torch.rand(1)*(eps*2)+(1-eps)
     return -r1*amp*((x+r2) % (mod))+r3+amp/4
+
+def generate_gaussian(x:torch.Tensor, mu, sigma, noisy=True):
+    y = torch.exp(torch.distributions.Normal(mu, sigma).log_prob(x))
+    dx = x.shape[-1]
+    noise = torch.clamp(torch.randn_like(x)*1e-7**0.5, min=0).view(-1, dx)
+    return y + noise if noisy else y
+
+def generate_reverse_gaussian(x:torch.Tensor, mu, sigma, noisy=True):
+    y = torch.exp(torch.distributions.Normal(mu, sigma).log_prob(x))
+    dx = x.shape[-1]
+    noise = torch.clamp(torch.randn_like(x)*1e-7**0.5, min=0).view(-1, dx)
+    return -1 * (y + noise if noisy else y)
