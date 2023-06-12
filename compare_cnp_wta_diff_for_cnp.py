@@ -28,6 +28,9 @@ num_val_indiv = num_val//num_classes
 
 colors = ['r', 'b']
 
+num_inc = [0, 0]
+num_all = 0
+
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
 y = torch.zeros(num_demos, t_steps, dy)
@@ -61,6 +64,7 @@ x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
 # %%
 def get_batch(x, y, traj_ids, device=device_wta):
+    global num_all
     n_t = torch.randint(1, n_max_tar, (1,)).item()  # 1 <= number of target points < n_max_tar 
     n_o = torch.randint(1, n_max_obs, (1,)).item()
 
@@ -69,9 +73,34 @@ def get_batch(x, y, traj_ids, device=device_wta):
     tar_val = torch.zeros(batch_size, n_t, dy, device=device)
 
     for i in range(len(traj_ids)):
-        random_query_ids = torch.randperm(t_steps)
-        o_ids = random_query_ids[:n_o]
-        t_ids = random_query_ids[n_o:n_o+n_t]
+        num_all += 1
+        # random_query_ids = torch.randperm(t_steps)  # like this before but we need [0] and [-1] more often. That's why the trick below
+
+        # The trick
+        # region
+        nof_added_manually = 0
+        added_manually = []
+        if torch.rand(1) < 0.01:  # add first point 1% of the time
+            nof_added_manually += 1
+            added_manually.append(0)
+            num_inc[0] += 1
+
+        if torch.rand(1) < 0.01:  # add last point 1% of the time
+            nof_added_manually += 1
+            added_manually.append(-1)
+            num_inc[1] += 1
+
+        if n_o > nof_added_manually and nof_added_manually > 0:
+            random_query_ids = torch.randperm(t_steps-2)+1  # excluding [0] and [-1]
+            o_ids = torch.cat((torch.tensor(added_manually), random_query_ids[:n_o-nof_added_manually]))
+            t_ids = random_query_ids[n_o-nof_added_manually:n_o-nof_added_manually+n_t]
+
+        else:
+            random_query_ids = torch.randperm(t_steps)
+            o_ids = random_query_ids[:n_o]
+            t_ids = random_query_ids[n_o:n_o+n_t]
+
+        # endregion
 
         obs[i, :, :] = torch.cat((x[traj_ids[i], o_ids], y[traj_ids[i], o_ids]), dim=-1)
         tar[i, :, :] = x[traj_ids[i], t_ids]
@@ -80,16 +109,19 @@ def get_batch(x, y, traj_ids, device=device_wta):
     # print("Obs:", obs.shape, "Tar:", tar.shape, "Tar_val:", tar_val.shape)
     return obs, tar, tar_val
 
-def get_validation_batch(vx, vy, o_ids=[0, -1], device=device_wta):
-    traj_ids = torch.randperm(num_val)[:batch_size]
-    num_obs = len(o_ids)
+
+def get_validation_batch(vx, vy, traj_ids, device=device_wta):
+    num_obs = torch.randint(1, n_max_obs, (1,)).item()
 
     obs = torch.zeros(batch_size, num_obs, dx+dy, device=device)
     tar = torch.zeros(batch_size, t_steps, dx, device=device)
     tar_val = torch.zeros(batch_size, t_steps, dy, device=device)
 
     for i in range(len(traj_ids)):
-        obs[i, :, :] = torch.cat((vx[traj_ids[i], o_ids, :], vy[traj_ids[i], o_ids, :]), dim=-1)
+        random_query_ids = torch.randperm(t_steps-2)+1
+        o_ids = random_query_ids[:num_obs]
+
+        obs[i, :, :] = torch.cat((vx[traj_ids[i], o_ids], vy[traj_ids[i], o_ids]), dim=-1)
         tar[i, :, :] = vx[traj_ids[i]]
         tar_val[i, :, :] = vy[traj_ids[i]]
     # obs = torch.cat((vx[trajectory_ids, o_ids, :], vy[trajectory_ids, o_ids, :]), dim=-1).to(device)
@@ -99,10 +131,10 @@ def get_validation_batch(vx, vy, o_ids=[0, -1], device=device_wta):
     return obs, tar, tar_val
 
 # %%
-model_wta = WTA_CNP(1, 1, 6, 6, [128, 128, 256], num_decoders=2, decoder_hidden_dims=[256, 128, 128], batch_size=batch_size).to(device_wta)
+model_wta = WTA_CNP(1, 1, 6, 6, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size).to(device_wta)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-model_cnp = CNP(input_dim=1, hidden_dim=256, output_dim=1, n_max_obs=6, n_max_tar=6, num_layers=3, batch_size=batch_size).to(device_cnp)
+model_cnp = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=6, n_max_tar=6, num_layers=3, batch_size=batch_size).to(device_cnp)
 optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
 print("WTA Model:", model_wta)
@@ -131,8 +163,9 @@ if not os.path.exists(f'{root_folder}saved_models/'):
     os.makedirs(f'{root_folder}saved_models/')
 
 
-epochs = 500000
+epochs = 250_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
+v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss_wta, avg_loss_cnp = 0, 0
 
 val_per_epoch = 1000
@@ -147,9 +180,6 @@ wta_tr_loss_path = f'{root_folder}wta_training_loss.pt'
 wta_val_err_path = f'{root_folder}wta_validation_error.pt'
 cnp_tr_loss_path = f'{root_folder}cnp_training_loss.pt'
 cnp_val_err_path = f'{root_folder}cnp_validation_error.pt'
-
-o_wta, t_wta, tr_wta = get_validation_batch(vx, vy,device=device_wta)
-o_cnp, t_cnp, tr_cnp = get_validation_batch(vx, vy, device=device_cnp)
 
 for epoch in range(epochs):
     epoch_loss_wta, epoch_loss_cnp = 0, 0
@@ -183,19 +213,27 @@ for epoch in range(epochs):
 
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
-            p_wta, g_wta = model_wta(o_wta, t_wta)
-            # dec_id = torch.zeros_like(g, device=device)
-            dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-            vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
-            val_loss_wta = mse_loss(vp_means, tr_wta).item()
+            v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
+            val_loss_wta, val_loss_cnp = 0, 0
+            
+            for j in range(v_epoch_iter):
+                o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, v_traj_ids[j], device=device_wta)
+                o_cnp, t_cnp, tr_cnp = o_wta.clone(), t_wta.clone(), tr_wta.clone()
+
+                p_wta, g_wta = model_wta(o_wta, t_wta)
+                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
+                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                val_loss_wta += mse_loss(vp_means, tr_wta).item()
+
+                pred_cnp, encoded_rep = model_cnp(o_cnp, t_cnp)
+                val_loss_cnp += mse_loss(pred_cnp[:, :, :model_cnp.output_dim], tr_cnp)
+
             validation_error_wta.append(val_loss_wta)
             if val_loss_wta < min_val_loss_wta:
                 min_val_loss_wta = val_loss_wta
                 print(f'(WTA)New best: {min_val_loss_wta}')
                 torch.save(model_wta.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
 
-            pred_cnp, encoded_rep = model_cnp(o_cnp, t_cnp)
-            val_loss_cnp = mse_loss(pred_cnp[:, :, :model_cnp.output_dim], tr_cnp)
             validation_error_cnp.append(val_loss_cnp.item())
             if val_loss_cnp < min_val_loss_cnp:
                 min_val_loss_cnp = val_loss_cnp
@@ -217,6 +255,13 @@ for epoch in range(epochs):
         torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
 # %%
+# get_batch(x, y, torch.tensor([0]))
 
+# %%
+torch.save(y, f'{root_folder}y.pt')
+print(y)
+
+# %%
+print(f'num_inc / num_all: {num_inc}/{num_all}')
 
 
