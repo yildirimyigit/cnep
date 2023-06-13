@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=6, other_loss_coeff=0.1):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -14,6 +14,9 @@ class WTA_CNP(nn.Module):
         self.num_decoders = num_decoders
         self.decoder_num_layers = len(decoder_hidden_dims)
         self.batch_size = batch_size
+
+        self.nll_coeff = nll_coeff
+        self.other_loss_coeff = other_loss_coeff
 
         self.doubt_coef, self.entropy_coef, self.gate_std_coef = self.calculate_coef()
 
@@ -97,7 +100,7 @@ class WTA_CNP(nn.Module):
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         gate_std = torch.std(gate_vals)
 
-        return 7*nll + 0.1*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+        return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
