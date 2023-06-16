@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=6, other_loss_coeff=0.1):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=0.7623, other_loss_coeff=6.224):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -100,7 +100,8 @@ class WTA_CNP(nn.Module):
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         gate_std = torch.std(gate_vals)
 
-        return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+        # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+        return 45*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
@@ -113,6 +114,14 @@ class WTA_CNP(nn.Module):
         doubt_coef = 1/(doubt_max - doubt_min)
 
         # Entropy coefficient, best: [1/num_decoders, ..., 1/num_decoders], worst: [1, 0, ..., 0]
+        # if self.batch_size > 1:
+        #     good_gate_distr, bad_gate_distr = torch.ones(1, self.num_decoders)/self.num_decoders, torch.eye(1, self.num_decoders)
+        #     entropy_max, entropy_min = torch.distributions.Categorical(probs=good_gate_distr).entropy(), torch.distributions.Categorical(probs=bad_gate_distr).entropy()
+            
+        #     entropy_coef = 1/(entropy_max - entropy_min)
+        # else:
+        #     entropy_coef = torch.tensor([0])
+
         good_gate_distr, bad_gate_distr = torch.ones(1, self.num_decoders)/self.num_decoders, torch.eye(1, self.num_decoders)
         entropy_max, entropy_min = torch.distributions.Categorical(probs=good_gate_distr).entropy(), torch.distributions.Categorical(probs=bad_gate_distr).entropy()
         
