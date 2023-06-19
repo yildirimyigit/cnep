@@ -73,6 +73,37 @@ class WTA_CNP(nn.Module):
 
         return pred, gate_vals
 
+    # def loss(self, pred, gate_vals, real):
+    #     # pred: (num_decoders, batch_size, n_t (<n_max_tar), 2*output_dim)
+    #     # real: (batch_size, n_t (<n_max_tar), output_dim)
+
+    #     pred_means = pred[:, :, :, :self.output_dim]
+    #     pred_stds = nn.functional.softplus(pred[:, :, :, self.output_dim:])
+
+    #     pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians
+    #     dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
+
+    #     #############
+    #     # Actual loss
+    #     nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
+
+    #     #############
+    #     # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt
+    #     doubt = (torch.prod(gate_vals, dim=-1)).mean()  # scalar
+
+    #     #############
+    #     # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
+    #     gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
+    #     entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
+
+    #     #############
+    #     # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
+    #     gate_std = torch.std(gate_vals)
+
+    #     # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+    #     return 45*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+    #     # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
+
     def loss(self, pred, gate_vals, real):
         # pred: (num_decoders, batch_size, n_t (<n_max_tar), 2*output_dim)
         # real: (batch_size, n_t (<n_max_tar), output_dim)
@@ -89,19 +120,10 @@ class WTA_CNP(nn.Module):
 
         #############
         # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt
-        doubt = (torch.prod(gate_vals, dim=-1)).mean()  # scalar
-
-        #############
-        # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
-        gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
-        entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
-
-        #############
-        # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
-        gate_std = torch.std(gate_vals)
-
-        # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
-        return 45*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+        # print(gate_vals)
+        doubt = torch.distributions.Categorical(probs=gate_vals).entropy()
+        
+        return 5*nll + doubt, nll  # 4, 0.1 for increasing the importance of nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
