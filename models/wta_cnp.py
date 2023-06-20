@@ -123,7 +123,7 @@ class WTA_CNP(nn.Module):
         # print(gate_vals)
         doubt = torch.distributions.Categorical(probs=gate_vals).entropy()
         
-        return 5*nll + doubt, nll  # 4, 0.1 for increasing the importance of nll
+        return nll + 8*doubt, nll  # 4, 0.1 for increasing the importance of nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
