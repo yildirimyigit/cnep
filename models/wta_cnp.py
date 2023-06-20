@@ -106,9 +106,10 @@ class WTA_CNP(nn.Module):
 
     def loss(self, pred, gate_vals, real):
         # pred: (num_decoders, batch_size, n_t (<n_max_tar), 2*output_dim)
+        # gate_vals: (batch_size, num_decoders)
         # real: (batch_size, n_t (<n_max_tar), output_dim)
 
-        pred_means = pred[:, :, :, :self.output_dim]
+        pred_means = pred[:, :, :, :self.output_dim]  # (num_decoders, batch_size, n_t (<n_max_tar), output_dim)
         pred_stds = nn.functional.softplus(pred[:, :, :, self.output_dim:])
 
         pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians
@@ -116,14 +117,36 @@ class WTA_CNP(nn.Module):
 
         #############
         # Actual loss
-        nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
+        # nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
+        nll = dec_loss[torch.argmax(gate_vals)]
 
         #############
         # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt
         # print(gate_vals)
-        doubt = torch.distributions.Categorical(probs=gate_vals).entropy()
+        # doubt = torch.distributions.Categorical(probs=gate_vals).entropy()
+
+        #############
+        # distance metric calculates the total distance between the predictions of the decoders. We want to increase the distance
+        # distance = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
+        # for i in range(self.num_decoders):
+        #     dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
+        #     for j in range(self.num_decoders):
+        #         dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
+        #         distance[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean((-2, -1))
+
+        # print(distance, '\n***')
+
+        #############
+        # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
+        mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
+        for i in range(self.num_decoders):
+            dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
+            for j in range(self.num_decoders):
+                dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
+                mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean((-2, -1))
         
-        return nll + 8*doubt, nll  # 4, 0.1 for increasing the importance of nll
+        # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
+        return nll - mutual_info.sum()/1e+18, nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
     
     def calculate_coef(self):
