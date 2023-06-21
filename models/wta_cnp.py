@@ -112,7 +112,7 @@ class WTA_CNP(nn.Module):
         pred_means = pred[:, :, :, :self.output_dim]  # (num_decoders, batch_size, n_t (<n_max_tar), output_dim)
         pred_stds = nn.functional.softplus(pred[:, :, :, self.output_dim:])
 
-        pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians
+        pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians. Not a list but a singleGaussian Mixture Model object
         dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
 
         #############
@@ -139,9 +139,9 @@ class WTA_CNP(nn.Module):
         #############
         # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
         mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
-        for i in range(self.num_decoders):
+        for i in range(self.num_decoders-1):
             dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
-            for j in range(self.num_decoders):
+            for j in range(i+1, self.num_decoders):
                 dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
                 mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean((-2, -1))
         

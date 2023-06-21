@@ -33,7 +33,7 @@ colors = ['r', 'b']
 num_inc = 0
 num_exc = 0
 
-fixed_obs_ratio = 0.00000001
+fixed_obs_ratio = 0.001
 
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
@@ -200,7 +200,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
     return obs, tar, tar_val
 
 # %%
-model_wta = WTA_CNP(1, 1, 6, 6, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size).to(device_wta)
+model_wta = WTA_CNP(1, 1, 6, 6, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size).to(device_wta)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
 model_cnp = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=6, n_max_tar=6, num_layers=3, batch_size=batch_size).to(device_cnp)
@@ -219,9 +219,13 @@ print("WTA-CNP:", get_parameter_count(model_wta))
 print("CNP:", get_parameter_count(model_cnp))
 
 # %%
-def draw_val_plot(root_folder, epoch):
+from matplotlib.lines import Line2D
 
-    plt.ylim((-0.8, 0.8))
+
+def draw_val_plot(root_folder, epoch):
+    plt_y_lim = torch.max(vy)
+
+    plt.ylim((-plt_y_lim, plt_y_lim))
 
     obs0 = torch.Tensor([0.0, 0.0]).unsqueeze(0).unsqueeze(0).to(device_wta)
     obs1 = torch.Tensor([1.0, 0.0]).unsqueeze(0).unsqueeze(0).to(device_wta)
@@ -235,25 +239,35 @@ def draw_val_plot(root_folder, epoch):
         pred_wta1, gate1 = model_wta(obs1, tar)
 
     plt.scatter(0.0, 0.0, c='k')
-    plt.plot(torch.linspace(0, 1, 200), pred_wta0[0,0,:,0].cpu(), 'r', alpha=gate0[0, 0, 0].item())  # wta pred 0
-    plt.plot(torch.linspace(0, 1, 200), pred_wta0[1,0,:,0].cpu(), 'r', alpha=gate0[0, 0, 1].item())  # wta pred 1
+    plt.plot(torch.linspace(0, 1, 200), pred_wta0[0,0,:,0].cpu(), 'r', alpha=max(0.25, gate0[0, 0, 0].item()))  # wta pred 0
+    plt.plot(torch.linspace(0, 1, 200), pred_wta0[1,0,:,0].cpu(), 'r', alpha=max(0.25, gate0[0, 0, 1].item()))  # wta pred 1
     plt.plot(torch.linspace(0, 1, 200), pred_cnp0[:, :, :model_cnp.output_dim].squeeze(0).cpu(), 'b')  # cnp pred
     plt.plot(torch.linspace(0, 1, 200), vy[0].squeeze(-1).cpu(), 'k', alpha=0.3)  # data
     plt.plot(torch.linspace(0, 1, 200), vy[1].squeeze(-1).cpu(), 'k', alpha=0.3)  # data
+
+    line0 = Line2D([0], [0], label=f'gate0: {gate0[0, 0, 0].item():.4f}', color='r')
+    line1 = Line2D([0], [0], label=f'gate1: {gate0[0, 0, 1].item():.4f}', color='r')
+    handles = [line0, line1]
+    plt.legend(handles=handles, loc='upper right')
 
     plt.savefig(f'{root_folder}img/0_{epoch}.png')
     plt.close()
 
     ##################
 
-    plt.ylim((-0.8, 0.8))
+    plt.ylim((-plt_y_lim, plt_y_lim))
 
     plt.scatter(1.0, 0.0, c='k')
-    plt.plot(torch.linspace(0, 1, 200), pred_wta1[0,0,:,0].cpu(), 'r', alpha=gate1[0, 0, 0].item())  # wta pred 0
-    plt.plot(torch.linspace(0, 1, 200), pred_wta1[1,0,:,0].cpu(), 'r', alpha=gate1[0, 0, 1].item())  # wta pred 1
+    plt.plot(torch.linspace(0, 1, 200), pred_wta1[0,0,:,0].cpu(), 'r', alpha=max(0.25, gate1[0, 0, 0].item()))  # wta pred 0
+    plt.plot(torch.linspace(0, 1, 200), pred_wta1[1,0,:,0].cpu(), 'r', alpha=max(0.25, gate1[0, 0, 1].item()))  # wta pred 1
     plt.plot(torch.linspace(0, 1, 200), pred_cnp1[:, :, :model_cnp.output_dim].squeeze(0).cpu(), 'b')  # cnp pred
     plt.plot(torch.linspace(0, 1, 200), vy[0].squeeze(-1).cpu(), 'k', alpha=0.3)  # data
     plt.plot(torch.linspace(0, 1, 200), vy[1].squeeze(-1).cpu(), 'k', alpha=0.3)  # data
+
+    line0 = Line2D([0], [0], label=f'gate0: {gate1[0, 0, 0].item():.4f}', color='r')
+    line1 = Line2D([0], [0], label=f'gate1: {gate1[0, 0, 1].item():.4f}', color='r')
+    handles = [line0, line1]
+    plt.legend(handles=handles, loc='upper right')
 
     plt.savefig(f'{root_folder}img/1_{epoch}.png')
     plt.close()
