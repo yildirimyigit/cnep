@@ -117,8 +117,8 @@ class WTA_CNP(nn.Module):
 
         #############
         # Actual loss
-        # nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
-        nll = dec_loss[torch.argmax(gate_vals)]
+        nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
+        # nll = dec_loss[torch.argmax(gate_vals)]
 
         #############
         # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt
