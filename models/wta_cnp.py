@@ -143,7 +143,7 @@ class WTA_CNP(nn.Module):
             dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
             for j in range(i+1, self.num_decoders):
                 dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
-                mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean((-2, -1))
+                mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean()
         
         # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
         return nll - mutual_info.sum()/1e+18, nll
