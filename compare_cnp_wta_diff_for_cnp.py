@@ -33,7 +33,7 @@ colors = ['r', 'b']
 num_inc = 0
 num_exc = 0
 
-fixed_obs_ratio = 0.01
+fixed_obs_ratio = 0.00000001
 
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
