@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=0.7623, other_loss_coeff=6.224):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=1.0, other_loss_coeff=5e-18):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -139,15 +140,56 @@ class WTA_CNP(nn.Module):
         #############
         # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
         mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
+        # for i in range(self.num_decoders-1):
+        #     dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
+        #     for j in range(i+1, self.num_decoders):
+        #         dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
+        #         mutual_info[i, j] = 0.5 * (torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_i, dist_j).mean())
         for i in range(self.num_decoders-1):
-            dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
             for j in range(i+1, self.num_decoders):
-                dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
-                mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean()
+                mutual_info[i, j] = 0.5 * (F.kl_div(pred_means[i], pred_means[j]).mean() + torch.distributions.kl.kl_divergence(pred_means[j], pred_means[i]).mean())
         
         # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
-        return nll - mutual_info.sum()/1e+18, nll
+        return self.nll_coeff * nll - self.other_loss_coeff * mutual_info.sum(), nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
+
+    def loss_jsd(self, pred, gate_vals, real):
+        # pred: (num_decoders, batch_size, n_t (<n_max_tar), 2*output_dim)
+        # gate_vals: (batch_size, num_decoders)
+        # real: (batch_size, n_t (<n_max_tar), output_dim)
+
+        pred_means = pred[:, :, :, :self.output_dim]  # (num_decoders, batch_size, n_t (<n_max_tar), output_dim)
+        pred_stds = nn.functional.softplus(pred[:, :, :, self.output_dim:])
+
+        pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians. Not a list but a singleGaussian Mixture Model object
+        dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
+
+        #############
+        # Actual loss
+        nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
+        # nll = dec_loss[torch.argmax(gate_vals)]
+
+        #############
+        # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
+        mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
+        for i in range(self.num_decoders-1):
+            for j in range(i+1, self.num_decoders):
+                mutual_info[i, j] = self.jensen_shannon_divergence(pred_means[i], pred_means[j])
+
+        return nll - 0.1 * mutual_info.sum(), nll
+    
+    def jensen_shannon_divergence(self, p, q):
+
+        # p and q are (1, n_t, output_dim) tensors. We want to flatten them and then compute the JSD
+
+        ep = torch.softmax(p.flatten(), 0)
+        eq = torch.softmax(q.flatten(), 0)
+
+        m = 0.5 * (ep + eq)
+        kl_pm = F.kl_div(ep.log(), m, reduction='batchmean')
+        kl_qm = F.kl_div(eq.log(), m, reduction='batchmean')
+        jsd = 0.5 * (kl_pm + kl_qm)
+        return jsd
     
     def calculate_coef(self):
         # Doubt, entropy and std need to be scaled
