@@ -1,6 +1,5 @@
 # %%
 import torch
-import matplotlib.pyplot as plt
 
 from models.wta_cnp import WTA_CNP
 from data.data_generators import *
@@ -47,12 +46,12 @@ x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 
-for i in range(num_indiv):
-    plt.plot(x[i, :, 0], y[i, :, 0], 'r', alpha=0.3)
-    plt.plot(x[i+num_indiv, :, 0], y[i+num_indiv, :, 0], 'g', alpha=0.3)
-    plt.plot(x[i+2*num_indiv, :, 0], y[i+2*num_indiv, :, 0], 'b', alpha=0.3)
-    plt.plot(x[i+3*num_indiv, :, 0], y[i+3*num_indiv, :, 0], 'magenta', alpha=0.3)
-plt.show()
+# for i in range(num_indiv):
+#     plt.plot(x[i, :, 0], y[i, :, 0], 'r', alpha=0.3)
+#     plt.plot(x[i+num_indiv, :, 0], y[i+num_indiv, :, 0], 'g', alpha=0.3)
+#     plt.plot(x[i+2*num_indiv, :, 0], y[i+2*num_indiv, :, 0], 'b', alpha=0.3)
+#     plt.plot(x[i+3*num_indiv, :, 0], y[i+3*num_indiv, :, 0], 'magenta', alpha=0.3)
+# plt.show()
 
 x, y = x.to(device), y.to(device)
 
@@ -139,8 +138,10 @@ def generate_test_batch(n=4):
     return obs, tar
 
 # %%
+# file_name = '1687358495'
+
 # Testing the best model
-model = WTA_CNP(1, 1, 10, 10, [256, 256, 256], 4, [128, 128, 128], 32)
+model = WTA_CNP(1, 1, 10, 10, [128, 128, 128], 4, [128, 128], 32)
 model.load_state_dict(torch.load(f'saved_models/wtacnp_synth_{file_name}.pt'))
 model.eval()
 
@@ -151,41 +152,6 @@ with torch.no_grad():
 
 p, g = p.cpu().numpy(), g.cpu()
 t, tr = t.cpu().numpy(), tr.cpu().numpy()
-
-for i in range(batch_size):
-    dec_id = torch.argmax(g[i, :, :]).item()
-    plt.plot(range(t_steps), p[dec_id, i, :, 0], colors[dec_id], alpha=0.3)
-    plt.plot(range(t_steps), tr[i, :, 0], 'k', alpha=0.3, linestyle='dashed')
-
-# %%
-model = WTA_CNP(1, 1, 10, 10, [256, 256, 256], 4, [128, 128, 128], 4)
-model.load_state_dict(torch.load(f'saved_models/wtacnp_synth_1685715603.pt'))
-model.eval()
-
-o, t = generate_test_batch()
-
-print(o)
-
-with torch.no_grad():
-    p, g = model(o, t)
-
-p, g = p.cpu().numpy(), g.cpu()
-
-for i in range(4):
-
-    print(o[i, 0, 0], o[i, 0, 1], o[i, 1, 0], o[i, 1, 1])
-
-    dec_id = torch.argmax(g[i, :, :]).item()
-    plt.plot(range(t_steps), p[dec_id, i, :, 0], colors[dec_id], alpha=0.7)
-
-    plt.scatter(o[i, 0, 0]*200, o[i, 0, 1], color='k', marker='x')
-    plt.scatter(o[i, 1, 0]*200, o[i, 1, 1], color='k', marker='x')
-
-for i in range(32):
-    plt.plot(range(t_steps), tr[i, :, 0], 'k', alpha=0.1, linestyle='dashed')
-
-plt.show()
-
 # %%
 pytorch_total_params = sum(p.numel() for p in model.parameters())
 print(pytorch_total_params)

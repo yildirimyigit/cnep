@@ -206,7 +206,7 @@ optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 model_cnp = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=6, n_max_tar=6, num_layers=3, batch_size=batch_size).to(device_cnp)
 optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
-print("WTA Model:", model_wta)
+# print("WTA Model:", model_wta)
 
 # %%
 def get_parameter_count(model):
@@ -223,7 +223,7 @@ from matplotlib.lines import Line2D
 
 
 def draw_val_plot(root_folder, epoch):
-    plt_y_lim = torch.max(vy)
+    plt_y_lim = torch.max(vy) + 0.1
 
     plt.ylim((-plt_y_lim, plt_y_lim))
 
@@ -287,6 +287,8 @@ if not os.path.exists(f'{root_folder}saved_models/'):
 
 if not os.path.exists(f'{root_folder}img/'):
     os.makedirs(f'{root_folder}img/')
+
+torch.save(y, f'{root_folder}y.pt')
 
 
 epochs = 300_000
@@ -403,7 +405,7 @@ for epoch in range(epochs):
 # make_gif(f'{root_folder}img/')
 
 # %%
-torch.save(y, f'{root_folder}y.pt')
+
 # print(y)
 
 # %%

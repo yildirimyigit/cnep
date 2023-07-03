@@ -140,14 +140,14 @@ class WTA_CNP(nn.Module):
         #############
         # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
         mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
-        # for i in range(self.num_decoders-1):
-        #     dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
-        #     for j in range(i+1, self.num_decoders):
-        #         dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
-        #         mutual_info[i, j] = 0.5 * (torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_i, dist_j).mean())
         for i in range(self.num_decoders-1):
+            dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
             for j in range(i+1, self.num_decoders):
-                mutual_info[i, j] = 0.5 * (F.kl_div(pred_means[i], pred_means[j]).mean() + torch.distributions.kl.kl_divergence(pred_means[j], pred_means[i]).mean())
+                dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
+                mutual_info[i, j] = 0.5 * (torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_i, dist_j).mean())
+        # for i in range(self.num_decoders-1):
+        #     for j in range(i+1, self.num_decoders):
+        #         mutual_info[i, j] = 0.5 * (F.kl_div(pred_means[i], pred_means[j]).mean() + F.kl_div(pred_means[j], pred_means[i]).mean())
         
         # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
         return self.nll_coeff * nll - self.other_loss_coeff * mutual_info.sum(), nll
