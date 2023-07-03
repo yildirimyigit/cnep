@@ -122,20 +122,9 @@ class WTA_CNP(nn.Module):
         # nll = dec_loss[torch.argmax(gate_vals)]
 
         #############
-        # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt
-        # print(gate_vals)
-        doubt = torch.distributions.Categorical(probs=gate_vals).entropy()
-
-        #############
-        # distance metric calculates the total distance between the predictions of the decoders. We want to increase the distance
-        # distance = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
-        # for i in range(self.num_decoders):
-        #     dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
-        #     for j in range(self.num_decoders):
-        #         dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
-        #         distance[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean((-2, -1))
-
-        # print(distance, '\n***')
+        # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
+        gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
+        entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
 
         #############
         # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
@@ -150,7 +139,7 @@ class WTA_CNP(nn.Module):
         #         mutual_info[i, j] = 0.5 * (F.kl_div(pred_means[i], pred_means[j]).mean() + F.kl_div(pred_means[j], pred_means[i]).mean())
         
         # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
-        return self.nll_coeff * nll - self.other_loss_coeff * mutual_info.sum() + self.doubt_coef * doubt, nll
+        return self.nll_coeff * nll - self.other_loss_coeff * mutual_info.sum() + self.entropy_coef * entropy, nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
         
     def calculate_coef(self):
@@ -175,7 +164,10 @@ class WTA_CNP(nn.Module):
         good_gate_distr, bad_gate_distr = torch.ones(1, self.num_decoders)/self.num_decoders, torch.eye(1, self.num_decoders)
         entropy_max, entropy_min = torch.distributions.Categorical(probs=good_gate_distr).entropy(), torch.distributions.Categorical(probs=bad_gate_distr).entropy()
         
-        entropy_coef = 1/(entropy_max - entropy_min)
+        if self.batch_size > 1:
+            entropy_coef = 1/(entropy_max - entropy_min)
+        else:
+            entropy_coef = torch.tensor([0])
 
         # Gate std coefficient, best: eye(num_decoders, num_decoder).repeat(batch_size//num_decoders, 1), worst: 1
         if self.batch_size > self.num_decoders:
