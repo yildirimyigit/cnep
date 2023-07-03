@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=3.0, other_loss_coeff=5e-18):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=5.0, other_loss_coeff=2e-18):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -133,7 +133,7 @@ class WTA_CNP(nn.Module):
             dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
             for j in range(i+1, self.num_decoders):
                 dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
-                mutual_info[i, j] = 0.5 * (torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_i, dist_j).mean())
+                mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_j, dist_i).mean()
         # for i in range(self.num_decoders-1):
         #     for j in range(i+1, self.num_decoders):
         #         mutual_info[i, j] = 0.5 * (F.kl_div(pred_means[i], pred_means[j]).mean() + F.kl_div(pred_means[j], pred_means[i]).mean())
