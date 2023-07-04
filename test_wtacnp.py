@@ -1,6 +1,6 @@
 # %%
 import torch
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from models.wta_cnp import WTA_CNP
 from data.data_generators import *
@@ -101,18 +101,18 @@ sweep_config = {
     'method': 'random',
     'name': 'sweep',
     'metric': {'goal': 'minimize', 'name': 'val_epoch_err'},
-    'parameters':
+    'parameters': 
     {
-        'nll_coeff': {'max': 10.0, 'min': 0.1},
-        'other_loss_coeff': {'max': 10.0, 'min': 0.1}
+        'nll_coeff': {'max': 50.0, 'min': 0.0},
+        'other_loss_coeff': {'max': 1e-17, 'min': 1e-19}
      }
 }
 
-#sweep_id = wandb.sweep(
+# sweep_id = wandb.sweep(
 #  sweep=sweep_config,
-#  project='wta-loss-components-sweep'
+#  project='wta-loss-components-sweeps-2'
 #  )
-sweep_id = 'z1mhmtvm'
+sweep_id = '9a1zhqkp'
 
 # %%
 import time
@@ -184,7 +184,7 @@ def model_train():
             avg_loss = 0
 
 # %%
-wandb.agent(sweep_id, function=model_train, count=16, project='wta-loss-components-sweep')
+wandb.agent(sweep_id, function=model_train, count=16, project='wta-loss-components-sweeps-2')
 
 # %%
 # Testing the best model
