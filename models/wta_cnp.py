@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=5.0, other_loss_coeff=2e-18):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coeff=10.0, other_loss_coeff=2e-18):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
