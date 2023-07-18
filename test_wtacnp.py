@@ -103,16 +103,16 @@ sweep_config = {
     'metric': {'goal': 'minimize', 'name': 'val_epoch_err'},
     'parameters': 
     {
-        'nll_coeff': {'max': 50.0, 'min': 0.0},
-        'other_loss_coeff': {'max': 1e-17, 'min': 1e-19}
+        'nll_coeff': {'max': 20.0, 'min': 0.0},
+        'other_loss_coeff': {'max': 1e-16, 'min': 1e-19}
      }
 }
 
-# sweep_id = wandb.sweep(
-#  sweep=sweep_config,
-#  project='wta-loss-components-sweeps-2'
-#  )
-sweep_id = '9a1zhqkp'
+sweep_id = wandb.sweep(
+ sweep=sweep_config,
+ project='wta-loss-components-sweeps-3'
+ )
+# sweep_id = '9a1zhqkp'
 
 # %%
 import time
@@ -184,7 +184,7 @@ def model_train():
             avg_loss = 0
 
 # %%
-wandb.agent(sweep_id, function=model_train, count=16, project='wta-loss-components-sweeps-2')
+wandb.agent(sweep_id, function=model_train, count=16, project='wta-loss-components-sweeps-3')
 
 # %%
 # Testing the best model

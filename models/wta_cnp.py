@@ -102,7 +102,7 @@ class WTA_CNP(nn.Module):
         gate_std = torch.std(gate_vals)
 
         # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
-        return 45*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
+        return 4*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
 
     # def loss(self, pred, gate_vals, real):
@@ -128,15 +128,12 @@ class WTA_CNP(nn.Module):
 
     #     #############
     #     # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
-    #     mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
+    # mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
     #     for i in range(self.num_decoders-1):
-    #         dist_i = torch.distributions.Normal(pred_means[i], pred_stds[i])
+    #         dist_i = torch.distributions.Normal(pred_means[i], torch.ones_like(pred_stds[i])*0.1)
     #         for j in range(i+1, self.num_decoders):
-    #             dist_j = torch.distributions.Normal(pred_means[j], pred_stds[j])
+    #             dist_j = torch.distributions.Normal(pred_means[j], torch.ones_like(pred_stds[j])*0.1)
     #             mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_j, dist_i).mean()
-    #     # for i in range(self.num_decoders-1):
-    #     #     for j in range(i+1, self.num_decoders):
-    #     #         mutual_info[i, j] = 0.5 * (F.kl_div(pred_means[i], pred_means[j]).mean() + F.kl_div(pred_means[j], pred_means[i]).mean())
         
     #     # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
     #     return self.nll_coeff * nll - self.other_loss_coeff * mutual_info.sum() + self.entropy_coef * entropy, nll
