@@ -6,7 +6,7 @@ import numpy as np
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=3.0, entropy_coef=10.0, gate_std_coef=1.0):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=1, entropy_coef=0.28, gate_std_coef=0.274):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -86,12 +86,13 @@ class WTA_CNP(nn.Module):
         pred_means = pred[:, :, :, :self.output_dim]
         pred_stds = nn.functional.softplus(pred[:, :, :, self.output_dim:])
 
-        pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians
+        pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-dimensional multivariate gaussian
         dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
 
         #############
         # Actual loss
-        nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
+        weighted_nll_per_ind = torch.sum(torch.mul(gate_vals.squeeze(1), dec_loss.T), dim=-1)  # (batch_size, )
+        nll = weighted_nll_per_ind.mean()  # scalar
 
         #############
         # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt --> decrease entropy

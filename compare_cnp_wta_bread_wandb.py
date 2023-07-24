@@ -41,7 +41,8 @@ vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
 vy = torch.zeros(num_val, t_steps, dy)
 
 # noise = torch.clamp(torch.randn(x.shape)*1e-7**0.5, min=0) - noise_clip
-coeff = (torch.rand(num_indiv)*0.75+0.25).unsqueeze(-1)
+# coeff = (torch.rand(num_indiv)*0.75+0.25).unsqueeze(-1)
+coeff = (torch.tensor([0.6])).unsqueeze(-1)
 y[:num_indiv] = torch.unsqueeze(generate_sin(x)*coeff, 2)
 y[num_indiv:] = -1 * y[:num_indiv]
 
@@ -140,10 +141,10 @@ sweep_config = {
 
 # sweep_id = wandb.sweep(
 #  sweep=sweep_config,
-#  project='bread-loss-components-sweep'
+#  project='bread-loss-components-sweep-2'
 #  )
 
-sweep_id = 'ngtolbuu'
+sweep_id = 'r7lk50k0'
 
 import time
 import os
@@ -155,7 +156,8 @@ def train():
     entropy_coef = wandb.config.entropy_coef
     gate_std_coef = wandb.config.gate_std_coef
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size).to(device_wta)
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size,
+                        nll_coef=nll_coef, entropy_coef=entropy_coef, gate_std_coef=gate_std_coef).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
     model_cnp = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
@@ -273,4 +275,4 @@ def train():
             torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
             torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
-wandb.agent(sweep_id, function=train, count=16, project='bread-loss-components-sweep')
+wandb.agent(sweep_id, function=train, count=16, project='bread-loss-components-sweep-2')
