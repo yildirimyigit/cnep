@@ -144,7 +144,7 @@ sweep_config = {
 #  project='bread-loss-components-sweep-3'
 #  )
 
-sweep_id = 'ido0meh1'
+sweep_id = 'd5fb2l61'
 
 import time
 import os
