@@ -6,7 +6,7 @@ import numpy as np
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=1, entropy_coef=0.28, gate_std_coef=0.274):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=18.028, entropy_coef=3.377, gate_std_coef=5.248):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -88,10 +88,11 @@ class WTA_CNP(nn.Module):
 
         pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-dimensional multivariate gaussian
         dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
+        min_losses, _ = dec_loss.min(dim=0)  # best loss per individual
 
         #############
         # Actual loss
-        weighted_nll_per_ind = torch.sum(torch.mul(gate_vals.squeeze(1), dec_loss.T), dim=-1)  # (batch_size, )
+        weighted_nll_per_ind = torch.mul(gate_vals.squeeze(1), dec_loss.T)  # (batch_size, )
         nll = weighted_nll_per_ind.mean()  # scalar
 
         #############
@@ -111,7 +112,7 @@ class WTA_CNP(nn.Module):
 
         # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
         # return 50*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
-        return self.nll_coef*nll - self.entropy_coef*entropy - self.gate_std_coef*gate_std, nll
+        return self.nll_coef*nll - self.entropy_coef*entropy - self.gate_std_coef*gate_std, min_losses.mean()
         # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
 
     # def loss(self, pred, gate_vals, real):

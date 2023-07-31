@@ -133,18 +133,18 @@ sweep_config = {
     'metric': {'goal': 'minimize', 'name': 'val_loss_wta'},
     'parameters': 
     {
-        'nll_coef': {'max': 20.0, 'min': -20.0},
-        'entropy_coef': {'max': 20.0, 'min': -20.0},
-        'gate_std_coef': {'max': 20.0, 'min': -20.0}
+        'nll_coef': {'max': 20.0, 'min': 0.0},
+        'entropy_coef': {'max': 20.0, 'min': 0.0},
+        'gate_std_coef': {'max': 20.0, 'min': 0.0}
      }
 }
 
-# sweep_id = wandb.sweep(
-#  sweep=sweep_config,
-#  project='bread-loss-components-sweep-2'
-#  )
+sweep_id = wandb.sweep(
+ sweep=sweep_config,
+ project='bread-loss-components-sweep-3'
+ )
 
-sweep_id = 'r7lk50k0'
+# sweep_id = 'r7lk50k0'
 
 import time
 import os
@@ -156,7 +156,7 @@ def train():
     entropy_coef = wandb.config.entropy_coef
     gate_std_coef = wandb.config.gate_std_coef
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size,
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size,
                         nll_coef=nll_coef, entropy_coef=entropy_coef, gate_std_coef=gate_std_coef).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
@@ -275,4 +275,4 @@ def train():
             torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
             torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
-wandb.agent(sweep_id, function=train, count=16, project='bread-loss-components-sweep-2')
+wandb.agent(sweep_id, function=train, count=100, project='bread-loss-components-sweep-3')
