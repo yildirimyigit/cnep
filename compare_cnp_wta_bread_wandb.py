@@ -139,12 +139,12 @@ sweep_config = {
      }
 }
 
-sweep_id = wandb.sweep(
- sweep=sweep_config,
- project='bread-loss-components-sweep-3'
- )
+# sweep_id = wandb.sweep(
+#  sweep=sweep_config,
+#  project='bread-loss-components-sweep-3'
+#  )
 
-# sweep_id = 'r7lk50k0'
+sweep_id = 'ido0meh1'
 
 import time
 import os
