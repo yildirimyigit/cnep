@@ -28,7 +28,7 @@ dx, dy = 1, 1
 num_val = 4
 num_val_indiv = num_val//num_classes
 
-colors = ['r', 'b', 'g', 'y']
+colors = ['r', 'purple', 'g', 'y']
 
 num_inc = 0
 num_exc = 0
