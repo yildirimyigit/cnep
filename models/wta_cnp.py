@@ -88,8 +88,8 @@ class WTA_CNP(nn.Module):
 
         pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-dimensional multivariate gaussian
         dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
-        dec_ids = torch.argmax(gate_vals, dim=-1).unsqueeze(0)
-        losses = dec_loss.gather(dim=0, dec_ids)  # loss per individual
+        dec_ids = torch.argmax(gate_vals.squeeze(1), dim=-1).unsqueeze(0)
+        losses = dec_loss.gather(0, dec_ids)  # 0:dim, loss per individual
 
         #############
         # Actual loss
