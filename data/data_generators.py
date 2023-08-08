@@ -17,6 +17,7 @@ def generate_reverse_cx_sigm(x:torch.Tensor):
 def generate_sin(x:torch.Tensor):
     dx = x.shape[-1]
     noise = torch.clamp(torch.randn_like(x)*1e-4**0.5, min=0).view(-1, dx)
+    noise = 0   # TODO: remove this
     return torch.sin(x*torch.pi) + noise
 
 
