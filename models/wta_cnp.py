@@ -6,7 +6,7 @@ import numpy as np
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=8.4, entropy_coef=10.672, gate_std_coef=7.553):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=16.81, batch_entropy_coef=10.672, ind_entropy_coef=7.553):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -19,11 +19,11 @@ class WTA_CNP(nn.Module):
         self.batch_size = batch_size
 
         self.nll_coef = nll_coef
-        self.entropy_coef = entropy_coef
-        self.gate_std_coef = gate_std_coef
-        #self.other_loss_coeff = other_loss_coeff
+        self.batch_entropy_coef = batch_entropy_coef
+        self.ind_entropy_coef = ind_entropy_coef
+        self.scale_coefs()
 
-        #self.doubt_coef, self.entropy_coef, self.gate_std_coef = self.calculate_coef()
+        #self.doubt_coef, self.batch_entropy_coef, self.ind_entropy_coef = self.calculate_coef()
 
         encoder_layers = []
         for i in range(self.encoder_num_layers-1):
@@ -97,106 +97,46 @@ class WTA_CNP(nn.Module):
         nll = weighted_nll_per_ind.mean() * self.batch_size  # scalar - mean over individuals and decoders - *bs for normalization
 
         #############
-        # Doubt is defined over individual gates. We want to penalize the model for being unsure about a single prediction; i.e we want to decrease doubt --> decrease entropy
-        # doubt = (torch.prod(gate_vals, dim=-1)).mean()  # scalar
-        doubt = 0#torch.sum(torch.mul(-gate_vals, torch.log(gate_vals)), dim=-1).mean()  # scalar
-
-        #############
         # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
         gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
         # entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
-        entropy = torch.sum(-gate_means*torch.log(gate_means))  # scalar
+        batch_entropy = self.entropy(gate_means)  # scalar
 
         #############
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
-        gate_std = torch.std(gate_vals, axis=-1).mean()  # scalar
+        # ind_entropy = torch.std(gate_vals, axis=-1).mean()  # scalar
+        ind_entropy = self.entropy(gate_vals).mean()  # scalar
 
-        # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
-        # return 50*nll + (doubt*self.doubt_coef - entropy*self.entropy_coef - gate_std*self.gate_std_coef), nll  # 4, 0.1 for increasing the importance of nll
-        return self.nll_coef*nll - self.entropy_coef*entropy - self.gate_std_coef*gate_std, losses.mean()
-        # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
+        # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
+        # return 50*nll + (doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
+        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean()
+        # return 5*nll + doubt - entropy - ind_entropy, nll  # 4, 0.1 for increasing the importance of nll
 
-    # def loss(self, pred, gate_vals, real):
-    #     # pred: (num_decoders, batch_size, n_t (<n_max_tar), 2*output_dim)
-    #     # gate_vals: (batch_size, num_decoders)
-    #     # real: (batch_size, n_t (<n_max_tar), output_dim)
+    def scale_coefs(self):
+        high_entropy_base = torch.tensor([0.5, 0.5])
+        high_entropy_base_value = self.entropy(high_entropy_base)
+        high_entropy_current = torch.ones(1, self.num_decoders)/self.num_decoders
+        high_entropy_current_value = self.entropy(high_entropy_current)
 
-    #     pred_means = pred[:, :, :, :self.output_dim]  # (num_decoders, batch_size, n_t (<n_max_tar), output_dim)
-    #     pred_stds = nn.functional.softplus(pred[:, :, :, self.output_dim:])
+        batch_size_incurred_weight_change = high_entropy_current_value/high_entropy_base_value
 
-    #     pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-many gaussians. Not a list but a singleGaussian Mixture Model object
-    #     dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
-
-    #     #############
-    #     # Actual loss
-    #     nll = torch.matmul(gate_vals, dec_loss).mean()  # (batch_size, batch_size).mean() = scalar
-    #     # nll = dec_loss[torch.argmax(gate_vals)]
-
-    #     #############
-    #     # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
-    #     gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
-    #     entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
-
-    #     #############
-    #     # Overall mutual information. We want to increase mutual information to encourage the model to use all decoders
-    # mutual_info = torch.zeros(self.num_decoders, self.num_decoders, device=gate_vals.device)
-    #     for i in range(self.num_decoders-1):
-    #         dist_i = torch.distributions.Normal(pred_means[i], torch.ones_like(pred_stds[i])*0.1)
-    #         for j in range(i+1, self.num_decoders):
-    #             dist_j = torch.distributions.Normal(pred_means[j], torch.ones_like(pred_stds[j])*0.1)
-    #             mutual_info[i, j] = torch.distributions.kl.kl_divergence(dist_i, dist_j).mean() + torch.distributions.kl.kl_divergence(dist_j, dist_i).mean()
-        
-    #     # return nll - distance.sum()/400000, nll  # 4, 0.1 for increasing the importance of nll
-    #     return self.nll_coeff * nll - self.other_loss_coeff * mutual_info.sum() + self.entropy_coef * entropy, nll
-    #     # return 5*nll + doubt - entropy - gate_std, nll  # 4, 0.1 for increasing the importance of nll
-        
-    # def calculate_coef(self):
-    #     # Doubt, entropy and std need to be scaled
-
-    #     # Doubt coefficient, best: [1, 0, ..., 0], worst: [1/num_decoders, ..., 1/num_decoders]
-    #     good_individual, bad_individual = torch.eye(1, self.num_decoders), torch.ones(1, self.num_decoders)/self.num_decoders
-    #     # doubt_min, doubt_max = torch.prod(good_individual).mean(), torch.prod(bad_individual).mean()
-    #     doubt_min, doubt_max = torch.distributions.Categorical(probs=good_individual).entropy(), torch.distributions.Categorical(probs=bad_individual).entropy()
-
-    #     doubt_coef = 1/(doubt_max - doubt_min)
-
-    #     # Entropy coefficient, best: [1/num_decoders, ..., 1/num_decoders], worst: [1, 0, ..., 0]
-    #     # if self.batch_size > 1:
-    #     #     good_gate_distr, bad_gate_distr = torch.ones(1, self.num_decoders)/self.num_decoders, torch.eye(1, self.num_decoders)
-    #     #     entropy_max, entropy_min = torch.distributions.Categorical(probs=good_gate_distr).entropy(), torch.distributions.Categorical(probs=bad_gate_distr).entropy()
-            
-    #     #     entropy_coef = 1/(entropy_max - entropy_min)
-    #     # else:
-    #     #     entropy_coef = torch.tensor([0])
-
-    #     # good_gate_distr, bad_gate_distr = torch.ones(1, self.num_decoders)/self.num_decoders, torch.eye(1, self.num_decoders)
-    #     # entropy_max, entropy_min = torch.distributions.Categorical(probs=good_gate_distr).entropy(), torch.distributions.Categorical(probs=bad_gate_distr).entropy()
-    #     # entropy_max, entropy_min = doubt_max, doubt_min
-        
-    #     if self.batch_size > 1:
-    #         entropy_coef = 1/(doubt_max - doubt_min)
-    #     else:
-    #         entropy_coef = torch.tensor([0])
-
-    #     # Gate std coefficient, best: eye(num_decoders, num_decoder).repeat(batch_size//num_decoders, 1), worst: 1
-    #     # if self.batch_size > self.num_decoders:
-    #     #     good_gate_distr = torch.eye(self.num_decoders, self.num_decoders).repeat(self.batch_size//self.num_decoders, 1)
-    #     #     bad_gate_distr = torch.ones_like(good_gate_distr)/self.num_decoders
-
-    #     # else:
-    #     #     good_gate_distr = torch.eye(self.batch_size, self.num_decoders)
-    #     #     bad_gate_distr = torch.ones_like(good_gate_distr)/self.num_decoders
-
-    #     gate_std_max, gate_std_min = torch.std(good_individual), torch.std(bad_individual)
-    #     gate_std_coef = 1/(gate_std_max - gate_std_min)
-
-    #     return doubt_coef, entropy_coef, gate_std_coef
+        self.batch_entropy_coef /= batch_size_incurred_weight_change
+        self.ind_entropy_coef /= batch_size_incurred_weight_change
+        self.nll_coef *= self.batch_size
     
-    # Overloaded to() method to also move doubt_coef, entropy_coef and gate_std_coef
+    def entropy(self, t: torch.Tensor):
+        if torch.any(t<0):
+            raise ValueError("log() not defined for negative values")
+        if torch.any(t==0):
+            t = t + 1e-10
+            t = t/t.sum()
+        return torch.sum(-t*torch.log(t), dim=-1)
+
+    # Overloaded to() method to also move coefs to device
     def to(self, device):
         new_self = super(WTA_CNP, self).to(device)
         # new_self.nll_coef = new_self.nll_coef.to(device)
-        # new_self.entropy_coef = new_self.entropy_coef.to(device)
-        # new_self.gate_std_coef = new_self.gate_std_coef.to(device)
+        new_self.batch_entropy_coef = new_self.batch_entropy_coef.to(device)
+        new_self.ind_entropy_coef = new_self.ind_entropy_coef.to(device)
 
         return new_self
