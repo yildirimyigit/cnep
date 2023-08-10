@@ -14,17 +14,20 @@ def generate_reverse_cx_sigm(x:torch.Tensor):
     return 1-generate_cx_sigm(x)
 
 
-def generate_sin(x:torch.Tensor):
+def generate_sin(x:torch.Tensor, noisy=False):
     dx = x.shape[-1]
-    noise = torch.clamp(torch.randn_like(x)*1e-4**0.5, min=0).view(-1, dx)
-    noise = 0   # TODO: remove this
+    noise = 0
+    if noisy:
+        noise = torch.clamp(torch.randn_like(x)*1e-4**0.5, min=0).view(-1, dx)
     return torch.sin(x*torch.pi) + noise
 
 
-def generate_cos(x:torch.Tensor):
+def generate_cos(x:torch.Tensor, noisy=False):
     dx = x.shape[-1]
-    noise = torch.clamp(torch.randn_like(x)*1e-4**0.5, min=0).view(-1, dx)
-    return torch.cos((0.5+x)*torch.pi) + 1 + noise
+    noise = 0
+    if noisy:
+        noise = torch.clamp(torch.randn_like(x)*1e-4**0.5, min=0).view(-1, dx)
+    return torch.cos(x*torch.pi) + noise
 
 def generate_chainsaw(x:torch.Tensor, amp=1, mod=0.5, eps=0.1):
     r1 = torch.rand(1)*(eps*2)+(1-eps)
