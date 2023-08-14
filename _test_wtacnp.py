@@ -130,12 +130,14 @@ def draw_val_plot(root_folder, epoch):
 
             plt.ylim((-plt_y_lim, plt_y_lim))
             plt.scatter(obs[i,:,:,0].cpu(), obs[i,:,:,1].cpu(), c='k')
-            for j in range(batch_size):
-                plt.plot(torch.linspace(0, 1, 200), pred_wta[j,0,:,0].cpu(), colors[j], alpha=max(0.2, gate[0, 0, j].item()))  # wta pred
+
             handles = []
+            for j in range(model.num_decoders):
+                plt.plot(torch.linspace(0, 1, 200), pred_wta[j,0,:,0].cpu(), colors[j], alpha=max(0.2, gate[0, 0, j].item()))  # wta pred
+                handles.append(Line2D([0], [0], label=f'gate{j}: {gate[0, 0, j].item():.4f}', color=colors[j]))
+            
             for j in range(batch_size):
                 plt.plot(torch.linspace(0, 1, 200), vy[j].squeeze(-1).cpu(), 'k', alpha=0.05 if j!=i else 0.35)  # data
-                handles.append(Line2D([0], [0], label=f'gate{j}: {gate[0, 0, j].item():.4f}', color=colors[j]))
 
             plt.legend(handles=handles, loc='upper right')
 
