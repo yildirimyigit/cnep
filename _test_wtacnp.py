@@ -116,7 +116,7 @@ print(sum(p.numel() for p in model.parameters()))
 from matplotlib.lines import Line2D
 
 def draw_val_plot(root_folder, epoch):
-    plt_y_lim = torch.max(vy) + 0.1
+    plt_y_lim = (torch.max(vy) + 0.1).item()
 
     obs = torch.zeros((batch_size, 1, 1, 2)).to(device)
     for i in range(batch_size):
