@@ -55,7 +55,7 @@ class CNP(nn.Module):
         # pred: (batch_size, n_t (<n_max_tar), 2*output_dim)
         # real: (batch_size, n_t (<n_max_tar), output_dim)
         pred_mean = pred[:, :, :self.output_dim]
-        pred_std = nn.functional.softplus(pred[:, :, self.output_dim:])
+        pred_std = nn.functional.softplus(pred[:, :, self.output_dim:]) + 1e-6 # 1e-6 for numerical stability
 
         pred_dist = torch.distributions.Normal(pred_mean, pred_std)
 
