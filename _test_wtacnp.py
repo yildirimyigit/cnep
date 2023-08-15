@@ -28,17 +28,19 @@ num_val_indiv = num_val//num_classes
 colors = ['r', 'g', 'b', 'm']
 
 # %%
-from IPython import get_ipython
-ip = get_ipython()
-if ip is None:
-    ip = False
-else:
-    ip = True
-
+# from IPython import get_ipython
+# ip = get_ipython()
+# if ip is None:
+#     ip = False
+# else:
+#     ip = True
+ip=False
 # %%
 # Data generation
 import matplotlib.pyplot as plt
-plt.switch_backend('agg')
+
+if not ip:
+    plt.switch_backend('agg')
 
 dx = 1
 t_steps = 200
@@ -107,7 +109,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
     return obs, tar, tar_val
 
 # %%
-model = WTA_CNP(1, 1, 6, 6, [256, 256], 4, [184, 184, 184], 32, nll_coef=5.0, batch_entropy_coef=-4.0, ind_entropy_coef=-1.3).to(device)
+model = WTA_CNP(1, 1, 6, 6, [128, 128, 128], 4, [128, 128, 128], 32, nll_coef=7.0, batch_entropy_coef=20.0, ind_entropy_coef=5.3).to(device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model.parameters())
 
 print(sum(p.numel() for p in model.parameters()))
@@ -116,7 +118,8 @@ print(sum(p.numel() for p in model.parameters()))
 from matplotlib.lines import Line2D
 
 def draw_val_plot(root_folder, epoch):
-    plt_y_lim = (torch.max(vy) + 0.1).item()
+    plt_y_lim_up = (torch.max(vy) + 0.1).item()
+    plt_y_lim_down = (torch.min(vy) - 0.1).item()
 
     obs = torch.zeros((batch_size, 1, 1, 2)).to(device)
     for i in range(batch_size):
@@ -128,7 +131,7 @@ def draw_val_plot(root_folder, epoch):
         for i in range(batch_size):
             pred_wta, gate = model(obs[i], tar)
 
-            plt.ylim((-plt_y_lim, plt_y_lim))
+            plt.ylim((plt_y_lim_down, plt_y_lim_up))
             plt.scatter(obs[i,:,:,0].cpu(), obs[i,:,:,1].cpu(), c='k')
 
             handles = []
@@ -162,7 +165,7 @@ if not os.path.exists(f'{root_folder}img/'):
 
 torch.save(y, f'{root_folder}y.pt')
 
-epochs = 1_500_000
+epochs = 1_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss = 0
@@ -212,7 +215,8 @@ for epoch in range(epochs):
                 print(f'New best: {min_val_error}')
                 torch.save(model.state_dict(), f'{root_folder}saved_models/best.pt')
 
-        draw_val_plot(root_folder, epoch)
+        if epoch % (val_per_epoch*50) == 0:
+            draw_val_plot(root_folder, epoch)
 
     avg_loss += epoch_loss
 
@@ -225,18 +229,18 @@ for epoch in range(epochs):
         torch.save(torch.Tensor(validation_error), val_err_path)
 
 
-# %%
-# def get_validation_batch(o_ids=[0, -120]):
-#     obs = torch.cat((vx[:, o_ids, :], vy[:, o_ids, :]), dim=-1)
-#     tar = vx[:, torch.arange(t_steps)]
-#     tar_val= vy[:, torch.arange(t_steps)]
+# # %%
+# # def get_validation_batch(o_ids=[0, -120]):
+# #     obs = torch.cat((vx[:, o_ids, :], vy[:, o_ids, :]), dim=-1)
+# #     tar = vx[:, torch.arange(t_steps)]
+# #     tar_val= vy[:, torch.arange(t_steps)]
 
-#     return obs, tar, tar_val
+# #     return obs, tar, tar_val
 
-# def get_validation_batch(o_ids=[15]):
-#     obs = torch.cat((vx[:, o_ids, :], vy[:, o_ids, :]), dim=-1)
-#     tar = vx[:, torch.arange(t_steps)]
-#     tar_val= vy[:, torch.arange(t_steps)]
+# def get_validation_batch(traj_ids=[0,1,2,3], o_ids=[15]):
+#     obs = torch.cat((vx[traj_ids, o_ids, :].cpu(), vy[traj_ids, o_ids, :].cpu()), dim=-1).unsqueeze(1)
+#     tar = torch.index_select(vx.cpu(), 0, torch.tensor(traj_ids))
+#     tar_val= torch.index_select(vy.cpu(), 0, torch.tensor(traj_ids))
 
 #     return obs, tar, tar_val
 
@@ -250,27 +254,87 @@ for epoch in range(epochs):
 
 #     return obs, tar
 
-# %%
-# file_name = '1691856202'
+# # %%
+# file_name = '/home/yigit/projects/mbcnp/outputs/combined/1692048376/'
+
+# test_batch_size = 4
 
 # # Testing the best model
-# model = WTA_CNP(1, 1, 6, 6, [128, 256, 128], 4, [128, 128, 128], 32)
-# model.load_state_dict(torch.load(f'saved_models/wtacnp_synth_{file_name}.pt'))
+# model = WTA_CNP(1, 1, 6, 6, [128, 128, 128], 4, [128, 128, 128], test_batch_size)
+# model.load_state_dict(torch.load(f'{file_name}saved_models/best.pt'))
 # model.eval()
 
-# o, t, tr = get_validation_batch()
+# ids=[15]
+
+# o, t, tr = get_validation_batch(o_ids=ids)
 # print(o.shape, t.shape, tr.shape)
 
 # with torch.no_grad():
-#     p, g = model(o.cpu(), t.cpu())
+#     if next(model.parameters()).is_cuda:
+#         p, g = model(o, t)
+#     else:
+#         p, g = model(o.cpu(), t.cpu())
 
 # p, g = p.cpu().numpy(), g.cpu()
 # t, tr = t.cpu().numpy(), tr.cpu().numpy()
 
-# for i in range(batch_size):
+# for i in range(test_batch_size):
 #     dec_id = torch.argmax(g[i, :, :]).item()
 #     plt.plot(range(t_steps), p[dec_id, i, :, 0], colors[dec_id], alpha=0.3)
 #     plt.plot(range(t_steps), tr[i, :, 0], 'k', alpha=0.3, linestyle='dashed')
+
+# for i in range(len(ids)):
+#     plt.plot([ids[i]]*t_steps, torch.linspace(0, 1, t_steps), 'k--', alpha=0.75)
+
+# print(g.mean(dim=0))
+
+# # %%
+# ids=[33]
+
+# o, t, tr = get_validation_batch(o_ids=ids)
+# print(o.shape, t.shape, tr.shape)
+
+# with torch.no_grad():
+#     if next(model.parameters()).is_cuda:
+#         p, g = model(o, t)
+#     else:
+#         p, g = model(o.cpu(), t.cpu())
+
+# p, g = p.cpu().numpy(), g.cpu()
+# t, tr = t.cpu().numpy(), tr.cpu().numpy()
+
+# for i in range(test_batch_size):
+#     dec_id = torch.argmax(g[i, :, :]).item()
+#     plt.plot(range(t_steps), p[dec_id, i, :, 0], colors[dec_id], alpha=0.3)
+#     plt.plot(range(t_steps), tr[i, :, 0], 'k', alpha=0.3, linestyle='dashed')
+
+# for i in range(len(ids)):
+#     plt.plot([ids[i]]*t_steps, torch.linspace(0, 1, t_steps), 'k--', alpha=0.75)
+
+# print(g.mean(dim=0))
+
+# # %%
+# ids=[60]
+
+# o, t, tr = get_validation_batch(o_ids=ids)
+# print(o.shape, t.shape, tr.shape)
+
+# with torch.no_grad():
+#     if next(model.parameters()).is_cuda:
+#         p, g = model(o, t)
+#     else:
+#         p, g = model(o.cpu(), t.cpu())
+
+# p, g = p.cpu().numpy(), g.cpu()
+# t, tr = t.cpu().numpy(), tr.cpu().numpy()
+
+# for i in range(test_batch_size):
+#     dec_id = torch.argmax(g[i, :, :]).item()
+#     plt.plot(range(t_steps), p[dec_id, i, :, 0], colors[dec_id], alpha=0.3)
+#     plt.plot(range(t_steps), tr[i, :, 0], 'k', alpha=0.3, linestyle='dashed')
+
+# for i in range(len(ids)):
+#     plt.plot([ids[i]]*t_steps, torch.linspace(0, 1, t_steps), 'k--', alpha=0.75)
 
 # print(g.mean(dim=0))
 
