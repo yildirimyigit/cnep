@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
+# %%
 from models.cnp import CNP
 from models.wta_cnp import WTA_CNP
 
@@ -19,10 +14,7 @@ else:
 
 print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
-
-# In[2]:
-
-
+# %%
 batch_size = 4
 n_max_obs, n_max_tar = 10, 10
 
@@ -36,17 +28,14 @@ dx, dy = 1, 1
 num_val = 4
 num_val_indiv = num_val//num_classes
 
-colors = ['r', 'purple', 'g', 'y']
+colors = ['tomato', 'aqua', 'limegreen', 'gold']
 
 num_inc = 0
 num_exc = 0
 
 fixed_obs_ratio = 0.00000
 
-
-# In[3]:
-
-
+# %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
 # dum_x = torch.linspace(0, 1, 220).repeat(num_indiv, 1)
 y = torch.zeros(num_demos, t_steps, dy)
@@ -83,10 +72,7 @@ from matplotlib import pyplot as plt
 x0, y0 = x.to(device_wta), y.to(device_wta)
 x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
-
-# In[4]:
-
-
+# %%
 def get_batch(x, y, traj_ids, device=device_wta):
     global num_inc, num_exc
 
@@ -154,22 +140,16 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 
     return obs, tar, tar_val
 
-
-# In[5]:
-
-
+# %%
 model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size).to(device_wta)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-model_cnp = CNP(input_dim=1, hidden_dim=205, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+model_cnp = CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
 optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
 # print("WTA Model:", model_wta)
 
-
-# In[6]:
-
-
+# %%
 def get_parameter_count(model):
     total_num = 0
     for param in model.parameters():
@@ -179,10 +159,7 @@ def get_parameter_count(model):
 print("WTA-CNP:", get_parameter_count(model_wta))
 print("CNP:", get_parameter_count(model_cnp))
 
-
-# In[7]:
-
-
+# %%
 from matplotlib.lines import Line2D
 
 
@@ -215,10 +192,7 @@ def draw_val_plot(root_folder, epoch):
             plt.savefig(f'{root_folder}img/{i}_{epoch}.png')
             plt.close()
 
-
-# In[8]:
-
-
+# %%
 import time
 import os
 
@@ -315,7 +289,7 @@ for epoch in range(epochs):
                 print(f'(CNP)New best: {min_val_loss_cnp}')
                 torch.save(model_cnp.state_dict(), f'{root_folder}saved_models/cnp_on_synth.pt')
   
-        draw_val_plot(root_folder, epoch)
+        # draw_val_plot(root_folder, epoch)
 
 
     avg_loss_wta += epoch_loss_wta
@@ -331,18 +305,12 @@ for epoch in range(epochs):
         torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
         torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
-
-# In[ ]:
-
-
+# %%
 # get_batch(x, y, torch.tensor([0]))
 #o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, v_traj_ids[j])
 #print(o_wta[0].shape)
 
-
-# In[ ]:
-
-
+# %%
 # from PIL import Image
 # import glob
 
@@ -354,15 +322,14 @@ for epoch in range(epochs):
     
 # make_gif(f'{root_folder}img/')
 
-
-# In[ ]:
-
+# %%
 
 # print(y)
 
+# %%
+# print(f'num_inc / num_all: {num_inc}/{num_inc+num_exc}')
 
-# In[ ]:
+# %%
 
 
-print(f'num_inc / num_all: {num_inc}/{num_inc+num_exc}')
 
