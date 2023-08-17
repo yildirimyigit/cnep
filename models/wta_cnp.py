@@ -21,8 +21,9 @@ class WTA_CNP(nn.Module):
         self.nll_coef = nll_coef
         self.batch_entropy_coef = batch_entropy_coef
         self.ind_entropy_coef = ind_entropy_coef
-        
-        if scale_coefs:
+
+        self.do_scale: = scale_coefs
+        if self.do_scale::
             self.scale_coefs()
 
         #self.doubt_coef, self.batch_entropy_coef, self.ind_entropy_coef = self.calculate_coef()
@@ -137,8 +138,9 @@ class WTA_CNP(nn.Module):
     # Overloaded to() method to also move coefs to device
     def to(self, device):
         new_self = super(WTA_CNP, self).to(device)
-        # new_self.nll_coef = new_self.nll_coef.to(device)
-        # new_self.batch_entropy_coef = new_self.batch_entropy_coef.to(device)
-        # new_self.ind_entropy_coef = new_self.ind_entropy_coef.to(device)
+        if self.do_scale:
+            new_self.nll_coef = new_self.nll_coef.to(device)
+            new_self.batch_entropy_coef = new_self.batch_entropy_coef.to(device)
+            new_self.ind_entropy_coef = new_self.ind_entropy_coef.to(device)
 
         return new_self
