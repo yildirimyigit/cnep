@@ -5,9 +5,25 @@ from models.wta_cnp import WTA_CNP
 from data.data_generators import *
 import torch
 
+
+def get_available_gpu_with_most_memory():
+    gpu_memory = []
+    for i in range(torch.cuda.device_count()):
+        torch.cuda.set_device(i)  # Switch to the GPU to accurately measure memory
+        gpu_memory.append((i, torch.cuda.memory_stats()['reserved_bytes.all.current'] / (1024 ** 2)))
+    
+    gpu_memory.sort(key=lambda x: x[1], reverse=True)
+    
+    return gpu_memory[0][0]
+
 if torch.cuda.is_available():
-    device_wta = torch.device("cuda:0")
-    device_cnp = torch.device("cuda:1") if torch.cuda.device_count() > 1 else torch.device("cuda:0")
+    available_gpu = get_available_gpu_with_most_memory()
+    if available_gpu == 0:
+        device_wta = torch.device("cuda:0")
+        device_cnp = torch.device("cuda:0")
+    else:
+        device_wta = torch.device(f"cuda:{available_gpu}")
+        device_cnp = torch.device(f"cuda:{available_gpu}")
 else:
     device_wta = torch.device("cpu")
     device_cnp = torch.device("cpu")
