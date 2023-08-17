@@ -141,7 +141,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
     return obs, tar, tar_val
 
 # %%
-model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size).to(device_wta)
+model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
 model_cnp = CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)

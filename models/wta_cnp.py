@@ -6,7 +6,7 @@ import numpy as np
 
 class WTA_CNP(nn.Module):
     def __init__(self, input_dim=1, output_dim=1, n_max_obs=10, n_max_tar=10, encoder_hidden_dims=[256,256,256],
-                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=16.81, batch_entropy_coef=10.672, ind_entropy_coef=7.553):
+                 num_decoders=4, decoder_hidden_dims=[128,128], batch_size=32, nll_coef=16.81, batch_entropy_coef=10.672, ind_entropy_coef=7.553, scale_coefs=False):
         super(WTA_CNP, self).__init__()
 
         self.input_dim = input_dim
@@ -21,7 +21,9 @@ class WTA_CNP(nn.Module):
         self.nll_coef = nll_coef
         self.batch_entropy_coef = batch_entropy_coef
         self.ind_entropy_coef = ind_entropy_coef
-        # self.scale_coefs()
+        
+        if scale_coefs:
+            self.scale_coefs()
 
         #self.doubt_coef, self.batch_entropy_coef, self.ind_entropy_coef = self.calculate_coef()
 
