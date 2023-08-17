@@ -22,8 +22,8 @@ class WTA_CNP(nn.Module):
         self.batch_entropy_coef = batch_entropy_coef
         self.ind_entropy_coef = ind_entropy_coef
 
-        self.do_scale: = scale_coefs
-        if self.do_scale::
+        self.do_scale = scale_coefs
+        if self.do_scale:
             self.scale_coefs()
 
         #self.doubt_coef, self.batch_entropy_coef, self.ind_entropy_coef = self.calculate_coef()
