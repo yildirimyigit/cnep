@@ -121,7 +121,7 @@ class WTA_CNP(nn.Module):
         high_entropy_current = torch.ones(1, self.num_decoders)/self.num_decoders
         high_entropy_current_value = self.entropy(high_entropy_current)
 
-        batch_size_incurred_weight_change = torch.tensor(high_entropy_current_value/high_entropy_base_value)
+        batch_size_incurred_weight_change = torch.tensor(high_entropy_current_value.item()/high_entropy_base_value.item())
 
         self.batch_entropy_coef /= batch_size_incurred_weight_change
         self.ind_entropy_coef /= batch_size_incurred_weight_change

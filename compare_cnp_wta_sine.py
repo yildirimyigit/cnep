@@ -10,10 +10,11 @@ def get_available_gpu_with_most_memory():
     gpu_memory = []
     for i in range(torch.cuda.device_count()):
         torch.cuda.set_device(i)  # Switch to the GPU to accurately measure memory
-        gpu_memory.append((i, torch.cuda.memory_reserved() - torch.cuda.memory_allocated()))
-    
+        gpu_memory.append((i, torch.cuda.mem_get_info()[0]))
+        print(gpu_memory[i])
+
     gpu_memory.sort(key=lambda x: x[1], reverse=True)
-    
+
     return gpu_memory[0][0]
 
 if torch.cuda.is_available():
