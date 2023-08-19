@@ -10,7 +10,7 @@ def get_available_gpu_with_most_memory():
     gpu_memory = []
     for i in range(torch.cuda.device_count()):
         torch.cuda.set_device(i)  # Switch to the GPU to accurately measure memory
-        gpu_memory.append((i, torch.cuda.memory_stats()['reserved_bytes.all.current'] / (1024 ** 2)))
+        gpu_memory.append((i, torch.cuda.memory_reserved() - torch.cuda.memory_allocated()))
     
     gpu_memory.sort(key=lambda x: x[1], reverse=True)
     
@@ -53,11 +53,16 @@ fixed_obs_ratio = 0.00000
 
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
-# dum_x = torch.linspace(0, 1, 220).repeat(num_indiv, 1)
 y = torch.zeros(num_demos, t_steps, dy)
 
 vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
 vy = torch.zeros(num_val, t_steps, dy)
+
+from matplotlib import pyplot as plt
+
+# for i in range(num_demos):
+#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), colors[i//num_indiv])
+#     plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
 
 for i in range(num_classes):
     start_ind = i*num_indiv
@@ -69,20 +74,9 @@ for i in range(num_classes):
     start_ind = i*num_val_indiv
     vy[start_ind:start_ind+num_indiv] = y[start_ind:start_ind+num_indiv].clone() + noise  # num_indiv = num_val_indiv
 
-# coeff = 2*torch.pi
-# y[:num_indiv] = torch.unsqueeze(generate_sin(x*coeff), 2)
-# coeff = torch.pi
-# y[num_indiv:] = torch.unsqueeze(generate_sin(x*coeff), 2)
-
 x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
-
-from matplotlib import pyplot as plt
-
-# for i in range(num_demos):
-#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), colors[i//num_indiv])
-#     plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
     
 
 x0, y0 = x.to(device_wta), y.to(device_wta)
@@ -156,63 +150,17 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 
     return obs, tar, tar_val
 
-# %%
-model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
-optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
-
-model_cnp = CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
-optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
-
-# print("WTA Model:", model_wta)
-
-# %%
-def get_parameter_count(model):
-    total_num = 0
-    for param in model.parameters():
-        total_num += param.shape.numel()
-    return total_num
-
-print("WTA-CNP:", get_parameter_count(model_wta))
-print("CNP:", get_parameter_count(model_cnp))
-
-# %%
-from matplotlib.lines import Line2D
-
-
-def draw_val_plot(root_folder, epoch):
-    plt_y_lim = torch.max(vy) + 0.1
-
-    obs = torch.zeros((model_wta.num_decoders, 1, 1, 2)).to(device_wta)
-    for i in range(batch_size):
-        obs[i] = torch.Tensor([x[i, 80, 0], y[i, 80, 0]]).unsqueeze(0).unsqueeze(0).to(device_wta)
-
-    tar = torch.linspace(0, 1, 200).unsqueeze(0).unsqueeze(-1).to(device_wta)
-
-    with torch.no_grad():
-        for i in range(batch_size):
-            pred_cnp, _ = model_cnp(obs[i], tar)
-            pred_wta, gate = model_wta(obs[i], tar)
-
-            plt.ylim((-plt_y_lim, plt_y_lim))
-            plt.scatter(obs[i,:,:,0].cpu(), obs[i,:,:,1].cpu(), c='k')
-            for j in range(batch_size):
-                plt.plot(torch.linspace(0, 1, 200), pred_wta[j,0,:,0].cpu(), colors[j], alpha=max(0.2, gate[0, 0, j].item()))  # wta pred
-            plt.plot(torch.linspace(0, 1, 200), pred_cnp[:, :, :model_cnp.output_dim].squeeze(0).cpu(), 'b')  # cnp pred
-            handles = []
-            for j in range(batch_size):
-                plt.plot(torch.linspace(0, 1, 200), vy[j].squeeze(-1).cpu(), 'k', alpha=0.05 if j!=i else 0.35)  # data
-                handles.append(Line2D([0], [0], label=f'gate{j}: {gate[0, 0, j].item():.4f}', color=colors[j]))
-
-            plt.legend(handles=handles, loc='upper right')
-
-            plt.savefig(f'{root_folder}img/{i}_{epoch}.png')
-            plt.close()
-
-# %%
 import time
 import os
 
-for _ in range(10):
+for _ in range(3):
+
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
+
+    model_cnp = CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+    optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
+
     timestamp = int(time.time())
     root_folder = f'outputs/sine/{str(timestamp)}/'
 
@@ -238,8 +186,9 @@ for _ in range(10):
 
     mse_loss = torch.nn.MSELoss()
 
-    training_loss_wta, validation_error_wta = [], []
-    training_loss_cnp, validation_error_cnp = [], []
+    training_loss_cnp, validation_error_cnp = torch.zeros(epochs, device=device_cnp), torch.zeros(epochs//val_per_epoch, device=device_cnp)
+    training_loss_wta, validation_error_wta = torch.zeros(epochs, device=device_wta), torch.zeros(epochs//val_per_epoch, device=device_wta)
+    validation_ind = 0
 
     wta_tr_loss_path = f'{root_folder}wta_training_loss.pt'
     wta_val_err_path = f'{root_folder}wta_validation_error.pt'
@@ -273,8 +222,8 @@ for _ in range(10):
             epoch_loss_wta += wta_nll.item()
             epoch_loss_cnp += loss_cnp.item()
 
-        training_loss_wta.append(epoch_loss_wta)
-        training_loss_cnp.append(epoch_loss_cnp)
+        training_loss_wta[i] = epoch_loss_wta
+        training_loss_cnp[i] = epoch_loss_cnp
 
         if epoch % val_per_epoch == 0:
             with torch.no_grad():
@@ -294,20 +243,19 @@ for _ in range(10):
                     val_loss_cnp += mse_loss(pred_cnp[:, :, :model_cnp.output_dim], tr_cnp)
 
 
-                validation_error_wta.append(val_loss_wta)
+                validation_error_wta[validation_ind] = val_loss_wta
                 if val_loss_wta < min_val_loss_wta:
                     min_val_loss_wta = val_loss_wta
                     print(f'(WTA)New best: {min_val_loss_wta}')
                     torch.save(model_wta.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
 
-                validation_error_cnp.append(val_loss_cnp.item())
+                validation_error_cnp[validation_ind] = val_loss_cnp
                 if val_loss_cnp < min_val_loss_cnp:
                     min_val_loss_cnp = val_loss_cnp
                     print(f'(CNP)New best: {min_val_loss_cnp}')
                     torch.save(model_cnp.state_dict(), f'{root_folder}saved_models/cnp_on_synth.pt')
-    
-            # draw_val_plot(root_folder, epoch)
 
+                validation_ind += 1
 
         avg_loss_wta += epoch_loss_wta
         avg_loss_cnp += epoch_loss_cnp
@@ -321,32 +269,3 @@ for _ in range(10):
             torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
             torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
             torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
-
-# %%
-# get_batch(x, y, torch.tensor([0]))
-#o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, v_traj_ids[j])
-#print(o_wta[0].shape)
-
-# %%
-# from PIL import Image
-# import glob
-
-# def make_gif(frame_folder):
-#     frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
-#     frame_one = frames[0]
-#     frame_one.save(f'{root_folder}img/animated.gif', format="GIF", append_images=frames,
-#                save_all=True, duration=1000, loop=0)
-    
-# make_gif(f'{root_folder}img/')
-
-# %%
-
-# print(y)
-
-# %%
-# print(f'num_inc / num_all: {num_inc}/{num_inc+num_exc}')
-
-# %%
-
-
-
