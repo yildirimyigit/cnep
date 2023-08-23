@@ -78,7 +78,7 @@ for i in range(num_classes):
 x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
-    
+
 
 x0, y0 = x.to(device_wta), y.to(device_wta)
 x1, y1 = x.to(device_cnp), y.to(device_cnp)
@@ -154,7 +154,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 import time
 import os
 
-for _ in range(3):
+for _ in range(5):
 
     model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
@@ -163,7 +163,7 @@ for _ in range(3):
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/{str(timestamp)}/'
+    root_folder = f'outputs/sine/0823/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -270,3 +270,6 @@ for _ in range(3):
             torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
             torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
             torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
+
+
+    open(f'{root_folder}fin', 'w').close()
