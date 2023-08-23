@@ -112,7 +112,7 @@ class WTA_CNP(nn.Module):
 
         # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
         # return 50*nll + (doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
-        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean(), (dec_loss, dec_ids, losses)
+        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean()
         # return 5*nll + doubt - entropy - ind_entropy, nll  # 4, 0.1 for increasing the importance of nll
 
     def scale_coefs(self):
