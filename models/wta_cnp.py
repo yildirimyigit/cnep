@@ -97,7 +97,7 @@ class WTA_CNP(nn.Module):
         #############
         # Actual loss
         weighted_nll_per_ind = torch.mul(gate_vals.squeeze(1), dec_loss.T)  # (batch_size, num_decoders)
-        nll = weighted_nll_per_ind.mean() * self.batch_size  # scalar - mean over individuals and decoders - *bs for normalization
+        nll = weighted_nll_per_ind.mean()  # scalar - mean over individuals and decoders
 
         #############
         # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
@@ -125,7 +125,7 @@ class WTA_CNP(nn.Module):
 
         self.batch_entropy_coef /= batch_size_incurred_weight_change
         self.ind_entropy_coef /= batch_size_incurred_weight_change
-        self.nll_coef *= torch.tensor(self.batch_size)
+        self.nll_coef *= self.num_decoders  #torch.tensor(self.batch_size)
     
     def entropy(self, t: torch.Tensor):
         if torch.any(t<0):
