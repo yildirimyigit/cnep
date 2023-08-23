@@ -112,7 +112,7 @@ class WTA_CNP(nn.Module):
 
         # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
         # return 50*nll + (doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
-        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean()
+        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean(), (dec_loss, dec_ids, losses)
         # return 5*nll + doubt - entropy - ind_entropy, nll  # 4, 0.1 for increasing the importance of nll
 
     def scale_coefs(self):
@@ -125,7 +125,7 @@ class WTA_CNP(nn.Module):
 
         self.batch_entropy_coef /= batch_size_incurred_weight_change
         self.ind_entropy_coef /= batch_size_incurred_weight_change
-        self.nll_coef *= torch.tensor(self.num_decoders)  #torch.tensor(self.batch_size)
+        self.nll_coef *= (torch.tensor(self.num_decoders)/2)  #torch.tensor(self.batch_size)
     
     def entropy(self, t: torch.Tensor):
         if torch.any(t<0):
