@@ -125,7 +125,7 @@ class WTA_CNP(nn.Module):
 
         self.batch_entropy_coef /= batch_size_incurred_weight_change
         self.ind_entropy_coef /= batch_size_incurred_weight_change
-        self.nll_coef *= self.num_decoders  #torch.tensor(self.batch_size)
+        self.nll_coef *= torch.tensor(self.num_decoders)  #torch.tensor(self.batch_size)
     
     def entropy(self, t: torch.Tensor):
         if torch.any(t<0):
