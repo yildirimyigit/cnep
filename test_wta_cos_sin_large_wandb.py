@@ -6,6 +6,7 @@ from data.data_generators import *
 import torch
 
 from matplotlib import pyplot as plt
+plt.switch_backend('agg')
 
 if torch.cuda.is_available():
     device_wta = torch.device("cuda:0")
@@ -260,7 +261,7 @@ def train():
                     'val_loss_wta': val_loss_wta
                 })
     
-            draw_val_plot(root_folder, epoch, model_wta)
+            # draw_val_plot(root_folder, epoch, model_wta)
 
         avg_loss_wta += epoch_loss_wta
 
