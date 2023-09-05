@@ -135,10 +135,10 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
     return obs, tar, tar_val
 
 # %%
-model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=2, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size).to(device_wta)
+model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [160, 160, 160], num_decoders=2, decoder_hidden_dims=[160, 160, 160], batch_size=batch_size, scale_coefs=True).to(device_wta)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-model_cnp = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+model_cnp = CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
 optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
 # print("WTA Model:", model_wta)
@@ -236,8 +236,8 @@ min_val_loss_wta, min_val_loss_cnp = 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
 
-training_loss_wta, validation_error_wta = [], []
-training_loss_cnp, validation_error_cnp = [], []
+training_loss_wta, training_loss_cnp = [], []
+validation_error_wta, validation_error_cnp = [], []
 
 wta_tr_loss_path = f'{root_folder}wta_training_loss.pt'
 wta_val_err_path = f'{root_folder}wta_validation_error.pt'
@@ -304,7 +304,8 @@ for epoch in range(epochs):
                 print(f'(CNP)New best: {min_val_loss_cnp}')
                 torch.save(model_cnp.state_dict(), f'{root_folder}saved_models/cnp_on_synth.pt')
 
-        draw_val_plot(root_folder, epoch)
+        if epoch % 10000 == 0:
+            draw_val_plot(root_folder, epoch)
 
 
     avg_loss_wta += epoch_loss_wta
