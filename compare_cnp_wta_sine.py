@@ -32,17 +32,17 @@ else:
 print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
 # %%
-batch_size = 4
+batch_size = 2
 n_max_obs, n_max_tar = 10, 10
 
 t_steps = 200
-num_demos = 4
-num_classes = 4
+num_demos = 2
+num_classes = 2
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
 
-num_val = 4
+num_val = 2
 num_val_indiv = num_val//num_classes
 
 colors = ['tomato', 'aqua', 'limegreen', 'gold']
@@ -59,12 +59,6 @@ y = torch.zeros(num_demos, t_steps, dy)
 vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
 vy = torch.zeros(num_val, t_steps, dy)
 
-from matplotlib import pyplot as plt
-
-# for i in range(num_demos):
-#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), colors[i//num_indiv])
-#     plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
-
 for i in range(num_classes):
     start_ind = i*num_indiv
     coeff = (i+1)/2*torch.pi
@@ -78,7 +72,6 @@ for i in range(num_classes):
 x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
-
 
 x0, y0 = x.to(device_wta), y.to(device_wta)
 x1, y1 = x.to(device_cnp), y.to(device_cnp)
@@ -156,14 +149,14 @@ import os
 
 for _ in range(5):
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [164, 164, 164], num_decoders=2, decoder_hidden_dims=[164, 164, 164], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-    model_cnp = CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+    model_cnp = CNP(input_dim=1, hidden_dim=202, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/0823/{str(timestamp)}/'
+    root_folder = f'outputs/sine/2_sines/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -177,7 +170,7 @@ for _ in range(5):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 2_000_000
+    epochs = 1_000_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
