@@ -32,17 +32,17 @@ else:
 print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
 # %%
-batch_size = 2
+batch_size = 3
 n_max_obs, n_max_tar = 10, 10
 
 t_steps = 200
-num_demos = 2
-num_classes = 2
+num_demos = 3
+num_classes = 3
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
 
-num_val = 2
+num_val = 3
 num_val_indiv = num_val//num_classes
 
 colors = ['tomato', 'aqua', 'limegreen', 'gold']
@@ -149,14 +149,14 @@ import os
 
 for _ in range(5):
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [164, 164, 164], num_decoders=2, decoder_hidden_dims=[164, 164, 164], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [150, 150, 150], num_decoders=3, decoder_hidden_dims=[150, 150, 150], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-    model_cnp = CNP(input_dim=1, hidden_dim=202, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+    model_cnp = CNP(input_dim=1, hidden_dim=216, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/2_sines/{str(timestamp)}/'
+    root_folder = f'outputs/sine/3_sines/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -170,7 +170,7 @@ for _ in range(5):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 1_000_000
+    epochs = 1_500_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
