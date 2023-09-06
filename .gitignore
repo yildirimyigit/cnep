@@ -1,6 +1,7 @@
 __pycache__/
 *.pt
 data/raw/
+out/
 *.out
 *.sh
 .ipynb_checkpoints/
