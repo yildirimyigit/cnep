@@ -2,7 +2,7 @@ import torch
 
 def generate_cx_sigm(x:torch.Tensor, noisy=False):
     # rand_btw_7-30 * {-1, 1}
-    c1 = torch.rand_like(x) * 1 + 7 #* torch.from_numpy(np.random.choice([-1, 1], (n, 1)))  # c1 for steepness
+    c1 = 9  # torch.rand_like(x) * 1 + 7 #* torch.from_numpy(np.random.choice([-1, 1], (n, 1)))  # c1 for steepness
     c2 = 0.5  # c2 midpoint
 
     noise = 0
