@@ -1,4 +1,3 @@
-# %%
 from models.cnp import CNP
 from models.wta_cnp import WTA_CNP
 
@@ -30,6 +29,10 @@ else:
 
 print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
+###
+
+torch.set_float32_matmul_precision('high')
+
 # %%
 batch_size = 4
 n_max_obs, n_max_tar = 10, 10
@@ -45,11 +48,6 @@ num_val = 4
 num_val_indiv = num_val//num_classes
 
 colors = ['tomato', 'aqua', 'limegreen', 'gold']
-
-num_inc = 0
-num_exc = 0
-
-fixed_obs_ratio = 0.00000
 
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
@@ -76,48 +74,18 @@ x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
 # %%
 def get_batch(x, y, traj_ids, device=device_wta):
-    global num_inc, num_exc
-
-
-    # if the following holds, we condition on 0, -1 or [0, -1] to estimate the rest
-    # if not, we condition on random-numbered random points
-    if torch.rand(1) < fixed_obs_ratio:
-        num_inc += 1
-        
-        if torch.rand(1) < 0.33:
-            n_o = 1  # [0]
-            n_t = t_steps - 1
-            o_ids = torch.tensor([0])
-            t_ids = torch.randperm(t_steps-1)+1  # excluding [0]
-        elif torch.rand(1) < 0.66:
-            n_o = 1  # [-1]
-            n_t = t_steps - 1
-            o_ids = torch.tensor([-1])
-            t_ids = torch.randperm(t_steps-1)  # excluding [-1]
-        else:
-            n_o = 2  # [0, -1]
-            n_t = t_steps - 2
-            o_ids = torch.tensor([0, -1])
-            t_ids = torch.randperm(t_steps-2)+1  # excluding [0] and [-1]
-
-        fixed = True
+    n_o = torch.randint(1, n_max_obs, (1,)).item()
+    n_t = torch.randint(1, n_max_tar, (1,)).item()
     
-    else:
-        num_exc += 1
-        n_o = torch.randint(1, n_max_obs, (1,)).item()
-        n_t = torch.randint(1, n_max_tar, (1,)).item()
-        fixed = False
-
     tar = torch.zeros(batch_size, n_t, dx, device=device)
     tar_val = torch.zeros(batch_size, n_t, dy, device=device)
     obs = torch.zeros(batch_size, n_o, dx+dy, device=device)
-    
+
     for i in range(len(traj_ids)):
-        if not fixed:
-            random_query_ids = torch.randperm(t_steps) 
-            
-            o_ids = random_query_ids[:n_o]
-            t_ids = random_query_ids[n_o:n_o+n_t]
+        random_query_ids = torch.randperm(t_steps)
+        
+        o_ids = random_query_ids[:n_o]
+        t_ids = random_query_ids[n_o:n_o+n_t]
 
         obs[i, :, :] = torch.cat((x[traj_ids[i], o_ids], y[traj_ids[i], o_ids]), dim=-1)
         tar[i, :, :] = x[traj_ids[i], t_ids]
@@ -155,6 +123,9 @@ for _ in range(5):
     model_cnp = CNP(input_dim=1, hidden_dim=256, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
+
+    if torch.__version__ >= "2.0":
+        model_cnp, model_wta = torch.compile(model_cnp), torch.compile(model_wta)
 
     timestamp = int(time.time())
     root_folder = f'outputs/combined/latest/{str(timestamp)}/'
@@ -255,11 +226,10 @@ for _ in range(5):
             print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/100, avg_loss_cnp/100))
             avg_loss_wta, avg_loss_cnp = 0, 0
 
-        if epoch % 100000:
-            torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
-            torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
-            torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
-            torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
+    torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
+    torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
+    torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
+    torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
 
     # %%

@@ -1,18 +1,37 @@
-# %%
 from models.cnp import CNP
 from models.wta_cnp import WTA_CNP
 
 from data.data_generators import *
 import torch
 
+
+def get_available_gpu_with_most_memory():
+    gpu_memory = []
+    for i in range(torch.cuda.device_count()):
+        torch.cuda.set_device(i)  # Switch to the GPU to accurately measure memory
+        gpu_memory.append((i, torch.cuda.memory_stats()['reserved_bytes.all.current'] / (1024 ** 2)))
+    
+    gpu_memory.sort(key=lambda x: x[1], reverse=True)
+    
+    return gpu_memory[0][0]
+
 if torch.cuda.is_available():
-    device_wta = torch.device("cuda:0")
-    device_cnp = torch.device("cuda:1") if torch.cuda.device_count() > 1 else torch.device("cuda:0")
+    available_gpu = get_available_gpu_with_most_memory()
+    if available_gpu == 0:
+        device_wta = torch.device("cuda:0")
+        device_cnp = torch.device("cuda:0")
+    else:
+        device_wta = torch.device(f"cuda:{available_gpu}")
+        device_cnp = torch.device(f"cuda:{available_gpu}")
 else:
     device_wta = torch.device("cpu")
     device_cnp = torch.device("cpu")
 
 print("Device WTA:", device_wta, "Device CNP:", device_cnp)
+
+###
+
+torch.set_float32_matmul_precision('high')
 
 # %%
 batch_size = 8
@@ -30,11 +49,6 @@ num_val_indiv = num_val//num_classes
 
 # colors = ['tomato', 'aqua', 'limegreen', 'gold']
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
-
-num_inc = 0
-num_exc = 0
-
-fixed_obs_ratio = 0.00000
 
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
@@ -77,50 +91,19 @@ from matplotlib import pyplot as plt
 x0, y0 = x.to(device_wta), y.to(device_wta)
 x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
-# %%
 def get_batch(x, y, traj_ids, device=device_wta):
-    global num_inc, num_exc
-
-
-    # if the following holds, we condition on 0, -1 or [0, -1] to estimate the rest
-    # if not, we condition on random-numbered random points
-    if torch.rand(1) < fixed_obs_ratio:
-        num_inc += 1
-        
-        if torch.rand(1) < 0.33:
-            n_o = 1  # [0]
-            n_t = t_steps - 1
-            o_ids = torch.tensor([0])
-            t_ids = torch.randperm(t_steps-1)+1  # excluding [0]
-        elif torch.rand(1) < 0.66:
-            n_o = 1  # [-1]
-            n_t = t_steps - 1
-            o_ids = torch.tensor([-1])
-            t_ids = torch.randperm(t_steps-1)  # excluding [-1]
-        else:
-            n_o = 2  # [0, -1]
-            n_t = t_steps - 2
-            o_ids = torch.tensor([0, -1])
-            t_ids = torch.randperm(t_steps-2)+1  # excluding [0] and [-1]
-
-        fixed = True
+    n_o = torch.randint(1, n_max_obs, (1,)).item()
+    n_t = torch.randint(1, n_max_tar, (1,)).item()
     
-    else:
-        num_exc += 1
-        n_o = torch.randint(1, n_max_obs, (1,)).item()
-        n_t = torch.randint(1, n_max_tar, (1,)).item()
-        fixed = False
-
     tar = torch.zeros(batch_size, n_t, dx, device=device)
     tar_val = torch.zeros(batch_size, n_t, dy, device=device)
     obs = torch.zeros(batch_size, n_o, dx+dy, device=device)
-    
+
     for i in range(len(traj_ids)):
-        if not fixed:
-            random_query_ids = torch.randperm(t_steps) 
-            
-            o_ids = random_query_ids[:n_o]
-            t_ids = random_query_ids[n_o:n_o+n_t]
+        random_query_ids = torch.randperm(t_steps)
+        
+        o_ids = random_query_ids[:n_o]
+        t_ids = random_query_ids[n_o:n_o+n_t]
 
         obs[i, :, :] = torch.cat((x[traj_ids[i], o_ids], y[traj_ids[i], o_ids]), dim=-1)
         tar[i, :, :] = x[traj_ids[i], t_ids]
@@ -163,6 +146,9 @@ def get_parameter_count(model):
 
 print("WTA-CNP:", get_parameter_count(model_wta))
 print("CNP:", get_parameter_count(model_cnp))
+
+if torch.__version__ >= "2.0":
+    model_cnp, model_wta = torch.compile(model_cnp), torch.compile(model_wta)
 
 # %%
 from matplotlib.lines import Line2D
@@ -304,34 +290,9 @@ for epoch in range(epochs):
         print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/100, avg_loss_cnp/100))
         avg_loss_wta, avg_loss_cnp = 0, 0
 
-    if epoch % 100000:
-        torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
-        torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
-        torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
-        torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
+torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
+torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
+torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
+torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
-# %%
-# get_batch(x, y, torch.tensor([0]))
-#o_wta, t_wta, tr_wta = get_validation_batch(vx, vy, v_traj_ids[j])
-#print(o_wta[0].shape)
-
-# %%
-# from PIL import Image
-# import glob
-
-# def make_gif(frame_folder):
-#     frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
-#     frame_one = frames[0]
-#     frame_one.save(f'{root_folder}img/animated.gif', format="GIF", append_images=frames,
-#                save_all=True, duration=1000, loop=0)
-    
-# make_gif(f'{root_folder}img/')
-
-# %%
-
-# print(y)
-
-# %%
-print(f'num_inc / num_all: {num_inc}/{num_inc+num_exc}')
-
-
+open(f'{root_folder}fin', 'w').close()
