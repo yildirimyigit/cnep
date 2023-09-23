@@ -33,20 +33,20 @@ print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
 torch.set_float32_matmul_precision('high')
 
-batch_size = 3
+batch_size = 8
 n_max_obs, n_max_tar = 10, 10
 
 t_steps = 200
-num_demos = 3
-num_classes = 3
+num_demos = 8
+num_classes = 8
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
 
-num_val = 3
+num_val = 8
 num_val_indiv = num_val//num_classes
 
-colors = ['tomato', 'aqua', 'limegreen', 'gold']
+colors = ['tomato', 'aqua', 'limegreen', 'gold', 'mediumslateblue', 'lightcoral', 'darkorange', 'teal']
 
 # %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
@@ -114,17 +114,17 @@ import os
 
 for _ in range(5):
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [150, 150, 150], num_decoders=3, decoder_hidden_dims=[150, 150, 150], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [256, 256, 256], num_decoders=8, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-    model_cnp = CNP(input_dim=1, hidden_dim=216, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+    model_cnp = CNP(input_dim=1, hidden_dim=364, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
     if torch.__version__ >= "2.0":
         model_cnp, model_wta = torch.compile(model_cnp), torch.compile(model_wta)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/3_sines/{str(timestamp)}/'
+    root_folder = f'outputs/sine/8_sines/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -138,7 +138,7 @@ for _ in range(5):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 1_500_000
+    epochs = 2_000_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
