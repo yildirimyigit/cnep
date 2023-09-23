@@ -33,17 +33,17 @@ print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
 torch.set_float32_matmul_precision('high')
 
-batch_size = 3
+batch_size = 1
 n_max_obs, n_max_tar = 10, 10
 
 t_steps = 200
-num_demos = 3
-num_classes = 3
+num_demos = 1
+num_classes = 1
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
 
-num_val = 3
+num_val = 1
 num_val_indiv = num_val//num_classes
 
 colors = ['tomato', 'aqua', 'limegreen', 'gold']
@@ -114,7 +114,7 @@ import os
 
 for _ in range(5):
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [150, 150, 150], num_decoders=3, decoder_hidden_dims=[150, 150, 150], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [150, 150, 150], num_decoders=num_classes, decoder_hidden_dims=[150, 150, 150], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
     model_cnp = CNP(input_dim=1, hidden_dim=216, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
@@ -124,7 +124,7 @@ for _ in range(5):
         model_cnp, model_wta = torch.compile(model_cnp), torch.compile(model_wta)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/3_sines/{str(timestamp)}/'
+    root_folder = f'outputs/sine/1_sine/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -138,7 +138,7 @@ for _ in range(5):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 1_500_000
+    epochs = 500_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
@@ -222,8 +222,8 @@ for _ in range(5):
         avg_loss_wta += epoch_loss_wta
         avg_loss_cnp += epoch_loss_cnp
 
-        if epoch % 100 == 0:
-            print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/100, avg_loss_cnp/100))
+        if epoch % val_per_epoch == 0:
+            print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/val_per_epoch, avg_loss_cnp/val_per_epoch))
             avg_loss_wta, avg_loss_cnp = 0, 0
 
     torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
