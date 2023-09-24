@@ -58,7 +58,7 @@ vy = torch.zeros(num_val, t_steps, dy)
 for i in range(num_classes):
     start_ind = i*num_indiv
     coeff = (i+1)/2*torch.pi
-    y[start_ind:start_ind+num_indiv] = torch.unsqueeze(generate_sin(x*coeff), 2)
+    y[start_ind:start_ind+num_indiv] = (torch.unsqueeze(generate_sin(x*coeff), 2) +1)/2.0
 
     noise = torch.unsqueeze(torch.clamp(torch.randn(x.shape)*1e-4**0.5, min=0) - noise_clip, -1)
 
@@ -68,9 +68,6 @@ for i in range(num_classes):
 x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
-
-x0, y0 = x.to(device_wta), y.to(device_wta)
-x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
 def get_batch(x, y, traj_ids, device=device_wta):
     n_o = torch.randint(1, n_max_obs, (1,)).item()
@@ -112,12 +109,12 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 import time
 import os
 
-for _ in range(5):
+for _ in range(1):
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [256, 256, 256], num_decoders=8, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [300, 300, 300], num_decoders=8, decoder_hidden_dims=[256, 256, 256], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-    model_cnp = CNP(input_dim=1, hidden_dim=364, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+    model_cnp = CNP(input_dim=1, hidden_dim=580, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
     if torch.__version__ >= "2.0":
@@ -138,7 +135,7 @@ for _ in range(5):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 2_000_000
+    epochs = 5_000_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
