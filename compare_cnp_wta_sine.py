@@ -109,7 +109,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 import time
 import os
 
-for _ in range(1):
+for _ in range(5):
 
     model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [300, 300, 300], num_decoders=8, decoder_hidden_dims=[256, 256, 256], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
@@ -219,8 +219,8 @@ for _ in range(1):
         avg_loss_wta += epoch_loss_wta
         avg_loss_cnp += epoch_loss_cnp
 
-        if epoch % 100 == 0:
-            print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/100, avg_loss_cnp/100))
+        if epoch % 1000 == 0:
+            print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/1000, avg_loss_cnp/1000))
             avg_loss_wta, avg_loss_cnp = 0, 0
 
     torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
