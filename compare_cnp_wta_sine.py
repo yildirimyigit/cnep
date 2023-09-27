@@ -141,6 +141,7 @@ for _ in range(5):
     avg_loss_wta, avg_loss_cnp = 0, 0
 
     val_per_epoch = 1000
+    print_loss_per_epoch = 1000
     min_val_loss_wta, min_val_loss_cnp = 1000000, 1000000
 
     mse_loss = torch.nn.MSELoss()
@@ -219,8 +220,8 @@ for _ in range(5):
         avg_loss_wta += epoch_loss_wta
         avg_loss_cnp += epoch_loss_cnp
 
-        if epoch % 1000 == 0:
-            print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/1000, avg_loss_cnp/1000))
+        if epoch % print_loss_per_epoch == 0:
+            print("Epoch: {}, WTA-Loss: {}, CNP-Loss: {}".format(epoch, avg_loss_wta/print_loss_per_epoch, avg_loss_cnp/print_loss_per_epoch))
             avg_loss_wta, avg_loss_cnp = 0, 0
 
     torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
