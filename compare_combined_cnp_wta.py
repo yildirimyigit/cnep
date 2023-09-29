@@ -94,15 +94,18 @@ def get_batch(x, y, traj_ids, device=device_wta):
     return obs, tar, tar_val
 
 def get_validation_batch(vx, vy, traj_ids, device=device_wta):
-    num_obs = torch.randint(1, n_max_obs, (1,)).item()
+#    num_obs = torch.randint(1, n_max_obs, (1,)).item()
+    num_obs = 1
 
     obs = torch.zeros(batch_size, num_obs, dx+dy, device=device)
     tar = torch.zeros(batch_size, t_steps, dx, device=device)
     tar_val = torch.zeros(batch_size, t_steps, dy, device=device)
 
+    o_ids = torch.tensor([32, 33, 34, 65, 66, 67, 98, 99, 100, 101, 132, 133])[torch.randint(0, 12, 1)]
+
     for i in range(len(traj_ids)):
-        random_query_ids = torch.randperm(t_steps)
-        o_ids = random_query_ids[:num_obs]
+        #random_query_ids = torch.randperm(t_steps)
+        #o_ids = random_query_ids[:num_obs]
 
         obs[i, :, :] = torch.cat((vx[traj_ids[i], o_ids], vy[traj_ids[i], o_ids]), dim=-1)
         tar[i, :, :] = vx[traj_ids[i]]
