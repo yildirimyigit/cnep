@@ -33,17 +33,17 @@ print("Device WTA:", device_wta, "Device CNP:", device_cnp)
 
 torch.set_float32_matmul_precision('high')
 
-batch_size = 8
+batch_size = 1
 n_max_obs, n_max_tar = 10, 10
 
 t_steps = 200
-num_demos = 8
-num_classes = 8
+num_demos = 1
+num_classes = 1
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
 
-num_val = 8
+num_val = 1
 num_val_indiv = num_val//num_classes
 
 colors = ['tomato', 'aqua', 'limegreen', 'gold', 'mediumslateblue', 'lightcoral', 'darkorange', 'teal']
@@ -109,19 +109,19 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 import time
 import os
 
-for _ in range(1):
+for _ in range(20):
 
-    model_wta = WTA_CNP(1, 1, n_max_obs, n_max_tar, [300, 300, 300], num_decoders=8, decoder_hidden_dims=[256, 256, 256], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta_ = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=1, decoder_hidden_dims=[127, 127, 127], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
 
-    model_cnp = CNP(input_dim=1, hidden_dim=580, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
+    model_cnp_ = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
 
     if torch.__version__ >= "2.0":
-        model_cnp, model_wta = torch.compile(model_cnp), torch.compile(model_wta)
+        model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/8_sines/{str(timestamp)}/'
+    root_folder = f'outputs/sine/1_sine/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -135,7 +135,7 @@ for _ in range(1):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 5_000_000
+    epochs = 750_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
@@ -207,13 +207,13 @@ for _ in range(1):
                 if val_loss_wta < min_val_loss_wta:
                     min_val_loss_wta = val_loss_wta
                     print(f'(WTA)New best: {min_val_loss_wta}')
-                    torch.save(model_wta.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
+                    torch.save(model_wta_.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
 
                 validation_error_cnp[validation_ind] = val_loss_cnp
                 if val_loss_cnp < min_val_loss_cnp:
                     min_val_loss_cnp = val_loss_cnp
                     print(f'(CNP)New best: {min_val_loss_cnp}')
-                    torch.save(model_cnp.state_dict(), f'{root_folder}saved_models/cnp_on_synth.pt')
+                    torch.save(model_cnp_.state_dict(), f'{root_folder}saved_models/cnp_on_synth.pt')
 
                 validation_ind += 1
 
@@ -229,5 +229,5 @@ for _ in range(1):
     torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
     torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
-
+    print('=======================')
     open(f'{root_folder}fin', 'w').close()
