@@ -112,10 +112,10 @@ import os
 for _ in range(20):
 
     model_wta_ = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 128, 128], num_decoders=1, decoder_hidden_dims=[127, 127, 127], batch_size=batch_size, scale_coefs=True).to(device_wta)
-    optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
+    optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
 
     model_cnp_ = CNP(input_dim=1, hidden_dim=128, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=3, batch_size=batch_size).to(device_cnp)
-    optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp.parameters())
+    optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp_.parameters())
 
     if torch.__version__ >= "2.0":
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
