@@ -101,7 +101,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
     tar = torch.zeros(batch_size, t_steps, dx, device=device)
     tar_val = torch.zeros(batch_size, t_steps, dy, device=device)
 
-    o_ids = torch.tensor([32, 33, 34, 65, 66, 67, 98, 99, 100, 101, 132, 133])[torch.randint(0, 12, 1)]
+    o_ids = torch.tensor([32, 33, 34, 65, 66, 67, 98, 99, 100, 101, 132, 133])[torch.randint(0, 12, (1,))]
 
     for i in range(len(traj_ids)):
         #random_query_ids = torch.randperm(t_steps)
@@ -128,7 +128,7 @@ for _ in range(10):
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/combined/large/{str(timestamp)}/'
+    root_folder = f'outputs/combined/large/diff_obs/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
