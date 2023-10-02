@@ -116,6 +116,11 @@ class WTA_CNP(nn.Module):
         # return 5*nll + doubt - entropy - ind_entropy, nll  # 4, 0.1 for increasing the importance of nll
 
     def scale_coefs(self):
+        if self.num_decoders == 1:
+            self.batch_entropy_coef = torch.tensor([0])
+            self.ind_entropy_coef = torch.tensor([0])
+            self.nll_coef = torch.tensor([1.0])
+            return
         high_entropy_base = torch.tensor([0.5, 0.5])
         high_entropy_base_value = self.entropy(high_entropy_base)
         high_entropy_current = torch.ones(1, self.num_decoders)/self.num_decoders
@@ -128,6 +133,8 @@ class WTA_CNP(nn.Module):
         self.nll_coef *= (torch.tensor(self.num_decoders)/2)  #torch.tensor(self.batch_size)
     
     def entropy(self, t: torch.Tensor):
+        if t.nelement == 1:
+            return torch.tensor(0.0)
         if torch.any(t<0):
             raise ValueError("log() not defined for negative values")
         if torch.any(t==0):
