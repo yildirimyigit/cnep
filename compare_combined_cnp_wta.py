@@ -94,18 +94,15 @@ def get_batch(x, y, traj_ids, device=device_wta):
     return obs, tar, tar_val
 
 def get_validation_batch(vx, vy, traj_ids, device=device_wta):
-#    num_obs = torch.randint(1, n_max_obs, (1,)).item()
-    num_obs = 1
+    num_obs = torch.randint(1, n_max_obs, (1,)).item()
 
     obs = torch.zeros(batch_size, num_obs, dx+dy, device=device)
     tar = torch.zeros(batch_size, t_steps, dx, device=device)
     tar_val = torch.zeros(batch_size, t_steps, dy, device=device)
 
-    o_ids = torch.tensor([32, 33, 34, 65, 66, 67, 98, 99, 100, 101, 132, 133])[torch.randint(0, 12, (1,))]
-
     for i in range(len(traj_ids)):
-        #random_query_ids = torch.randperm(t_steps)
-        #o_ids = random_query_ids[:num_obs]
+        random_query_ids = torch.randperm(t_steps)
+        o_ids = random_query_ids[:num_obs]
 
         obs[i, :, :] = torch.cat((vx[traj_ids[i], o_ids], vy[traj_ids[i], o_ids]), dim=-1)
         tar[i, :, :] = vx[traj_ids[i]]
@@ -128,7 +125,7 @@ for _ in range(5):
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/combined/large/diff_obs/{str(timestamp)}/'
+    root_folder = f'outputs/combined/last_decision/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
