@@ -121,7 +121,7 @@ for _ in range(20):
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/1_sine/{str(timestamp)}/'
+    root_folder = f'outputs/sine/1_sine/500k/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -135,7 +135,7 @@ for _ in range(20):
     torch.save(y, f'{root_folder}y.pt')
 
 
-    epochs = 750_000
+    epochs = 500_000
     epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
     v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
     avg_loss_wta, avg_loss_cnp = 0, 0
