@@ -125,7 +125,7 @@ for _ in range(5):
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/combined/last_decision/{str(timestamp)}/'
+    root_folder = f'outputs/combined/last_last/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
