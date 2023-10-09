@@ -121,7 +121,7 @@ for _ in range(20):
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/10_sine/{str(timestamp)}/'
+    root_folder = f'outputs/sine/10_sines/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
