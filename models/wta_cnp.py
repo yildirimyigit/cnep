@@ -61,7 +61,7 @@ class WTA_CNP(nn.Module):
             nn.Softmax(dim=-1)
         )
 
-    def forward(self, obs, tar):
+    def forward(self, obs, tar, latent=False):
         # obs: (batch_size, n_o (<n_max_obs), input_dim+output_dim)
         # tar: (batch_size, n_t (<n_max_tar), input_dim)
         n_t = tar.shape[1]
@@ -78,7 +78,9 @@ class WTA_CNP(nn.Module):
             pred[i] = self.decoders[i](rep_tar)
 
         gate_vals = self.gate(encoded_rep)  # (batch_size, num_decoders)
-
+        if latent:
+            return pred, gate_vals, encoded_rep
+        
         return pred, gate_vals
 
     def loss(self, pred, gate_vals, real):
