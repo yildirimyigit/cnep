@@ -109,12 +109,12 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 import time
 import os
 
-for _ in range(2):
+for _ in range(5):
 
-    model_wta_ = WTA_CNP(1, 1, n_max_obs, n_max_tar, [256, 256, 256], num_decoders=10, decoder_hidden_dims=[256, 256, 256], batch_size=batch_size, scale_coefs=True).to(device_wta)
+    model_wta_ = WTA_CNP(1, 1, n_max_obs, n_max_tar, [128, 256, 384], num_decoders=10, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
 
-    model_cnp_ = CNP(input_dim=1, hidden_dim=493, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=4, batch_size=batch_size).to(device_cnp)
+    model_cnp_ = CNP(input_dim=1, hidden_dim=364, output_dim=1, n_max_obs=n_max_obs, n_max_tar=n_max_tar, num_layers=4, batch_size=batch_size).to(device_cnp)
     optimizer_cnp = torch.optim.Adam(lr=1e-4, params=model_cnp_.parameters())
 
     if torch.__version__ >= "2.0":
