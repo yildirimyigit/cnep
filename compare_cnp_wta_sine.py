@@ -10,9 +10,9 @@ def get_available_gpu_with_most_memory():
     for i in range(torch.cuda.device_count()):
         torch.cuda.set_device(i)  # Switch to the GPU to accurately measure memory
         gpu_memory.append((i, torch.cuda.memory_stats()['reserved_bytes.all.current'] / (1024 ** 2)))
-    
+
     gpu_memory.sort(key=lambda x: x[1], reverse=True)
-    
+
     return gpu_memory[0][0]
 
 if torch.cuda.is_available():
@@ -72,14 +72,14 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 def get_batch(x, y, traj_ids, device=device_wta):
     n_o = torch.randint(1, n_max_obs, (1,)).item()
     n_t = torch.randint(1, n_max_tar, (1,)).item()
-    
+
     tar = torch.zeros(batch_size, n_t, dx, device=device)
     tar_val = torch.zeros(batch_size, n_t, dy, device=device)
     obs = torch.zeros(batch_size, n_o, dx+dy, device=device)
 
     for i in range(len(traj_ids)):
         random_query_ids = torch.randperm(t_steps)
-        
+
         o_ids = random_query_ids[:n_o]
         t_ids = random_query_ids[n_o:n_o+n_t]
 
@@ -109,7 +109,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device_wta):
 import time
 import os
 
-for _ in range(5):
+for run_id in range(5):
 
     model_wta_ = WTA_CNP(1, 1, n_max_obs, n_max_tar, [512, 512, 512, 512], num_decoders=20, decoder_hidden_dims=[128, 128, 128], batch_size=batch_size, scale_coefs=True).to(device_wta)
     optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
@@ -120,7 +120,7 @@ for _ in range(5):
         model_cnp, model_wta = torch.compile(model_cnp_), torch.compile(model_wta_)
 
     timestamp = int(time.time())
-    root_folder = f'outputs/sine/10_sines/{str(timestamp)}/'
+    root_folder = f'outputs/sine/20_sines/{str(timestamp)}/'
 
     if not os.path.exists(root_folder):
         os.makedirs(root_folder)
@@ -228,5 +228,5 @@ for _ in range(5):
     torch.save(torch.Tensor(training_loss_cnp), cnp_tr_loss_path)
     torch.save(torch.Tensor(validation_error_cnp), cnp_val_err_path)
 
-    print('========(best)=========')
+    print('===== Run #{run_id} finished =====')
     open(f'{root_folder}fin', 'w').close()
