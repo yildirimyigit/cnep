@@ -1,0 +1,3 @@
+[submodule "catkin_ws/src/baxter-python3"]
+	path = catkin_ws/src/baxter-python3
+	url = git@github.com:igor-lirussi/baxter-python3.git
