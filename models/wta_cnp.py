@@ -104,19 +104,14 @@ class WTA_CNP(nn.Module):
         #############
         # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
         gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
-        # entropy = torch.distributions.Categorical(probs=gate_means).entropy()  # scalar
         batch_entropy = self.entropy(gate_means)  # scalar
 
         #############
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
-        # ind_entropy = torch.std(gate_vals, axis=-1).mean()  # scalar
         ind_entropy = self.entropy(gate_vals).mean()  # scalar
 
-        # return self.nll_coeff*nll + self.other_loss_coeff*(doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
-        # return 50*nll + (doubt*self.doubt_coef - entropy*self.batch_entropy_coef - ind_entropy*self.ind_entropy_coef), nll  # 4, 0.1 for increasing the importance of nll
         return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean()
-        # return 5*nll + doubt - entropy - ind_entropy, nll  # 4, 0.1 for increasing the importance of nll
-
+   
     def scale_coefs(self):
         if self.num_decoders == 1:
             self.batch_entropy_coef = torch.tensor([0])
