@@ -120,13 +120,13 @@ else:
 torch.set_float32_matmul_precision('high')
 
 # %%
-batch_size = 1
-n_max_obs, n_max_tar = 10, 10
+batch_size = 4
+n_max_obs, n_max_tar = 60, 60
 
 t_steps = min_length
-num_val = 3
+num_val = 4
 num_demos = len(full_obs)-num_val
-num_classes = 1
+num_classes = 2
 num_indiv = num_demos//num_classes  # number of demos per class
 
 dx, dy = len(indices), len(full_act[0][0])
@@ -142,14 +142,15 @@ vx = torch.zeros(num_val, t_steps, dx, device=device)
 vy = torch.zeros(num_val, t_steps, dy, device=device)
 
 ind = torch.randperm(len(full_obs))
+vind = torch.randperm(num_val)
 
-for i in range(len(ind)):
-    if i < num_demos:
-        x[i] = torch.tensor(processed_obs[ind[i]], dtype=torch.float32)
-        y[i] = torch.tensor(processed_act[ind[i]], dtype=torch.float32)
+for i in range(len(full_obs)):
+    if i in vind:
+        vx[vind[i]] = torch.tensor(processed_obs[ind[i]], dtype=torch.float32)
+        vy[vind[i]] = torch.tensor(processed_act[ind[i]], dtype=torch.float32)
     else:
-        vx[i-num_demos] = torch.tensor(processed_obs[ind[i]], dtype=torch.float32)
-        vy[i-num_demos] = torch.tensor(processed_act[ind[i]], dtype=torch.float32)
+        x[i-num_val] = torch.tensor(processed_obs[ind[i]], dtype=torch.float32)
+        y[i-num_val] = torch.tensor(processed_act[ind[i]], dtype=torch.float32)
 
 
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
@@ -193,7 +194,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
     return obs, tar, tar_val
 
 # %%
-model_wta_ = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [1024, 1024, 1024], num_decoders=1, decoder_hidden_dims=[1024, 1024, 1024], batch_size=batch_size).to(device)
+model_wta_ = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [1024, 1024, 1024], num_decoders=2, decoder_hidden_dims=[512, 512, 512], batch_size=batch_size, scale_coefs=True).to(device)
 optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
 
 if torch.__version__ >= "2.0":
