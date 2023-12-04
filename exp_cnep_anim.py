@@ -132,9 +132,8 @@ def update_frame(i):
 fig = plt.figure()
 img = plt.imshow(video[0])
 
-ani = animation.FuncAnimation(fig, update_frame, frames=range(1, len(video)), interval=30, blit=True)
-
-plt.show()
+ani = animation.FuncAnimation(fig, update_frame, frames=range(1, len(video)), interval=30, blit=True, save_count=len(video))
+ani.save('cnep_cartwheel_test.mp4')
 
 # # %%
 # # import dm_control.locomotion as locomotion
