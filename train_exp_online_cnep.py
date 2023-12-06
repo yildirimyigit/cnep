@@ -10,21 +10,23 @@ for file_path in os.listdir(root):
     if file_path.endswith('.hdf5') and os.path.isfile(os.path.join(root, file_path)):
         # add filename to list
         files.append(file_path)
-# print(files)
+print(files)
 
 # %%
 import numpy as np
 
+desired_observables = ['actuator_activation', 'joints_pos', 'joints_vel', 'sensors_gyro', 'end_effectors_pos', 
+                       'sensors_torque', 'sensors_touch', 'sensors_velocimeter', 'world_zaxis']
+
 def get_obs_indices(path):
-    desired_observables = ['actuator_activation', 'appendages_pos', 'body_height', 'end_effectors_pos', 'joints_pos', 'joints_vel',
-                           'sensors_accelerometer', 'sensors_gyro', 'sensors_torque', 'sensors_touch', 'sensors_velocimeter', 'world_zaxis']
     indices = []
 
     f = h5py.File(path, 'r+')
     walker_obs_dict = f['observable_indices']['walker']
     for k in walker_obs_dict.keys():
         if k in desired_observables:
-            indices.extend(walker_obs_dict[k][:])
+            dum = walker_obs_dict[k][:]
+            indices.extend(dum)
     f.close()
 
     return np.array(indices)
@@ -113,15 +115,15 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-# print("Device :", device)
+print("Device :", device)
 
 ###
 
 torch.set_float32_matmul_precision('high')
 
 # %%
-batch_size = 4
-n_max_obs, n_max_tar = 60, 60
+batch_size = 2
+n_max_obs, n_max_tar = 6, 6
 
 t_steps = min_length
 num_val = 4
@@ -142,16 +144,18 @@ vx = torch.zeros(num_val, t_steps, dx, device=device)
 vy = torch.zeros(num_val, t_steps, dy, device=device)
 
 ind = torch.randperm(len(full_obs))
-vind = torch.randperm(num_val)
+vind = torch.cat((torch.randint(0, num_indiv, (num_val_indiv, 1)), torch.randint(num_indiv, num_demos, (num_val_indiv, 1))), dim=0)
+tr_ctr, val_ctr = 0, 0
 
 for i in range(len(full_obs)):
     if i in vind:
-        vx[vind[i]] = torch.tensor(processed_obs[ind[i]], dtype=torch.float32)
-        vy[vind[i]] = torch.tensor(processed_act[ind[i]], dtype=torch.float32)
+        vx[val_ctr] = torch.tensor(processed_obs[i], dtype=torch.float32)
+        vy[val_ctr] = torch.tensor(processed_act[i], dtype=torch.float32)
+        val_ctr += 1
     else:
-        x[i-num_val] = torch.tensor(processed_obs[ind[i]], dtype=torch.float32)
-        y[i-num_val] = torch.tensor(processed_act[ind[i]], dtype=torch.float32)
-
+        x[tr_ctr] = torch.tensor(processed_obs[i], dtype=torch.float32)
+        y[tr_ctr] = torch.tensor(processed_act[i], dtype=torch.float32)
+        tr_ctr += 1
 
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 
@@ -195,7 +199,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
 
 # %%
 model_wta_ = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [1024, 1024, 1024], num_decoders=2, decoder_hidden_dims=[512, 512, 512], batch_size=batch_size, scale_coefs=True).to(device)
-optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
+optimizer_wta = torch.optim.Adam(lr=5e-5, params=model_wta_.parameters())
 
 if torch.__version__ >= "2.0":
     model_wta = torch.compile(model_wta_)
@@ -213,13 +217,13 @@ if not os.path.exists(root_folder):
 if not os.path.exists(f'{root_folder}saved_models/'):
     os.makedirs(f'{root_folder}saved_models/')
 
-if not os.path.exists(f'{root_folder}img/'):
-    os.makedirs(f'{root_folder}img/')
+# if not os.path.exists(f'{root_folder}img/'):
+#     os.makedirs(f'{root_folder}img/')
 
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 10_000_000
+epochs = 50_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss_wta = 0
@@ -237,7 +241,15 @@ wta_val_err_path = f'{root_folder}wta_validation_error.pt'
 for epoch in range(epochs):
     epoch_loss_wta = 0
 
-    traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
+    # traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
+    traj_ids, v_traj_ids = [], []
+    inds = torch.randperm(num_indiv)
+    vinds = torch.randperm(num_val_indiv)
+    for i in inds:
+        traj_ids.append([inds[i], num_demos-inds[i]-1])
+
+    for i in vinds:
+        v_traj_ids.append([vinds[i], num_val-vinds[i]-1])
 
     for i in range(epoch_iter):
         optimizer_wta.zero_grad()
@@ -254,7 +266,7 @@ for epoch in range(epochs):
 
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
-            v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
+            # v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
             val_loss_wta = 0
 
             for j in range(v_epoch_iter):
@@ -266,14 +278,11 @@ for epoch in range(epochs):
                 val_loss_wta += mse_loss(vp_means, tr_wta).item()
 
             validation_error_wta.append(val_loss_wta)
+            print(f'Current val error: {val_loss_wta}')
             if val_loss_wta < min_val_loss_wta:
                 min_val_loss_wta = val_loss_wta
                 print(f'(WTA)New best: {min_val_loss_wta}')
                 torch.save(model_wta_.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
-  
-        # if epoch % (val_per_epoch*10) == 0:
-        #     draw_val_plot(root_folder, epoch)
-
 
     avg_loss_wta += epoch_loss_wta
 
@@ -283,5 +292,3 @@ for epoch in range(epochs):
 
 torch.save(torch.Tensor(training_loss_wta), wta_tr_loss_path)
 torch.save(torch.Tensor(validation_error_wta), wta_val_err_path)
-
-
