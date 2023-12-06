@@ -143,7 +143,8 @@ y = torch.zeros(num_demos, t_steps, dy, device=device)
 vx = torch.zeros(num_val, t_steps, dx, device=device)
 vy = torch.zeros(num_val, t_steps, dy, device=device)
 
-vind = torch.cat((torch.randint(0, num_indiv, (num_val_indiv, 1)), torch.randint(num_indiv, num_demos, (num_val_indiv, 1))), dim=0)
+num_traj_per_class = len(full_obs)//num_classes
+vind = torch.cat((torch.randint(0, num_traj_per_class, (num_val_indiv, 1)), torch.randint(num_traj_per_class, len(full_obs), (num_val_indiv, 1))), dim=0)
 tr_ctr, val_ctr = 0, 0
 
 print(vind)
