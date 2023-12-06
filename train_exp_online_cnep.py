@@ -283,7 +283,7 @@ for epoch in range(epochs):
 
             validation_error_wta.append(val_loss_wta)
             print(f'Current val error: {val_loss_wta}')
-            if val_loss_wta < min_val_loss_wta and epoch > 10_000:  # wait for 10k epochs before saving
+            if val_loss_wta < min_val_loss_wta and epoch > 50_000:  # wait for 50k epochs before saving
                 min_val_loss_wta = val_loss_wta
                 print(f'(WTA)New best: {min_val_loss_wta}')
                 torch.save(model_wta_.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
