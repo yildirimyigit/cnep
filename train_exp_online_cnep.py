@@ -143,16 +143,19 @@ y = torch.zeros(num_demos, t_steps, dy, device=device)
 vx = torch.zeros(num_val, t_steps, dx, device=device)
 vy = torch.zeros(num_val, t_steps, dy, device=device)
 
-ind = torch.randperm(len(full_obs))
 vind = torch.cat((torch.randint(0, num_indiv, (num_val_indiv, 1)), torch.randint(num_indiv, num_demos, (num_val_indiv, 1))), dim=0)
 tr_ctr, val_ctr = 0, 0
 
+print(vind)
+
 for i in range(len(full_obs)):
     if i in vind:
+        print(i, '*****')
         vx[val_ctr] = torch.tensor(processed_obs[i], dtype=torch.float32)
         vy[val_ctr] = torch.tensor(processed_act[i], dtype=torch.float32)
         val_ctr += 1
     else:
+        print(i)
         x[tr_ctr] = torch.tensor(processed_obs[i], dtype=torch.float32)
         y[tr_ctr] = torch.tensor(processed_act[i], dtype=torch.float32)
         tr_ctr += 1
