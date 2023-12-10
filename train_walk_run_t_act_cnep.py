@@ -3,6 +3,11 @@ import h5py
 import os
 
 root = f'{os.path.abspath(os.getcwd())}/data/raw/mocapact/'
+
+is_local = True
+if 'code' in root:  # dirty check to see if running on remote machine
+    is_local = False
+
 files = []
 
 # Iterate directory
@@ -199,11 +204,13 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
     return obs, tar, tar_val
 
 # %%
-model_wta = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [2048, 1536, 1024], num_decoders=2, decoder_hidden_dims=[512, 512, 512], batch_size=batch_size, scale_coefs=True).to(device)
-optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
+model_wta_ = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [2048, 1536, 1024], num_decoders=2, decoder_hidden_dims=[512, 512, 512], batch_size=batch_size, scale_coefs=True).to(device)
+optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
 
-# if torch.__version__ >= "2.0":
-#     model_wta = torch.compile(model_wta)
+if torch.__version__ >= "2.0" and is_local:
+    model_wta = torch.compile(model_wta_)
+else:
+    model_wta = model_wta_
 
 # %%
 import time

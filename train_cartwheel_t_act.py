@@ -3,6 +3,11 @@ import h5py
 import os
 
 root = f'{os.path.abspath(os.getcwd())}/data/raw/mocapact/'
+
+is_local = True
+if 'code' in root:  # dirty check to see if running on remote machine
+    is_local = False
+
 files = []
 
 # Iterate directory
@@ -148,11 +153,11 @@ tr_ctr, val_ctr = 0, 0
 
 for i in range(len(full_obs)):
     if i in vind:
-        vx[val_ctr] = torch.linspace(0, 1, t_steps, dtype=torch.float32).view_as(vx[val_ctr])
+        vx[val_ctr] = torch.linspace(0, 1, t_steps, dtype=torch.float32).view_as(vx[0])
         vy[val_ctr] = torch.tensor(processed_act[i], dtype=torch.float32)
         val_ctr += 1
     else:
-        x[tr_ctr] = torch.linspace(0, 1, t_steps, dtype=torch.float32).view_as(x[tr_ctr])
+        x[tr_ctr] = torch.linspace(0, 1, t_steps, dtype=torch.float32).view_as(x[0])
         y[tr_ctr] = torch.tensor(processed_act[i], dtype=torch.float32)
         tr_ctr += 1
 
@@ -197,11 +202,13 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
     return obs, tar, tar_val
 
 # %%
-model_wta = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [2048, 1536, 1024], num_decoders=2, decoder_hidden_dims=[1024, 1024, 1024], batch_size=batch_size, scale_coefs=True).to(device)
-optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta.parameters())
+model_wta_ = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [2048, 1536, 1024], num_decoders=2, decoder_hidden_dims=[1024, 1024, 1024], batch_size=batch_size, scale_coefs=True).to(device)
+optimizer_wta = torch.optim.Adam(lr=1e-4, params=model_wta_.parameters())
 
-# if torch.__version__ >= "2.0":
-#     model_wta = torch.compile(model_wta_)
+if torch.__version__ >= "2.0" and is_local:
+    model_wta = torch.compile(model_wta_)
+else:
+    model_wta = model_wta_
 
 # %%
 import time
@@ -269,7 +276,7 @@ for epoch in range(epochs):
             if val_loss_wta < min_val_loss_wta and epoch > 1e4:
                 min_val_loss_wta = val_loss_wta
                 print(f'(WTA)New best: {min_val_loss_wta}')
-                torch.save(model_wta.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
+                torch.save(model_wta_.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
   
         # if epoch % (val_per_epoch*10) == 0:
         #     draw_val_plot(root_folder, epoch)
