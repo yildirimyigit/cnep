@@ -135,7 +135,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
 
 # %%
 model_wta_ = WTA_CNP(dx, dy, n_max_obs, n_max_tar, [1024, 1024, 1024], num_decoders=2, decoder_hidden_dims=[512, 512, 512], batch_size=batch_size, scale_coefs=True).to(device)
-optimizer_wta = torch.optim.Adam(lr=1e-5, params=model_wta_.parameters())
+optimizer_wta = torch.optim.Adam(lr=5e-5, params=model_wta_.parameters())
 
 if torch.__version__ >= "2.0":
     model_wta = torch.compile(model_wta_)
@@ -159,7 +159,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 5_000_000
+epochs = 10_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss_wta = 0
@@ -205,6 +205,8 @@ for epoch in range(epochs):
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss_wta += mse_loss(vp_means, tr_wta).item()
+            
+            print(f'(WTA) val err: {val_loss_wta}')
 
             validation_error_wta.append(val_loss_wta)
             if val_loss_wta < min_val_loss_wta:
