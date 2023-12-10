@@ -2,7 +2,7 @@
 import h5py
 import os
 
-root = '/home/yigit/projects/mbcnp/data/raw/mocapact/'
+root = f'{os.path.abspath(os.getcwd())}/data/raw/mocapact/'
 files = []
 
 # Iterate directory

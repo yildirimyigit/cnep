@@ -2,7 +2,7 @@
 import h5py
 import os
 
-root = '/home/yigit/projects/mbcnp/data/raw/mocapact/'
+root = f'{os.path.abspath(os.getcwd())}/data/raw/mocapact/'
 files = []
 
 # Iterate directory
@@ -266,7 +266,7 @@ for epoch in range(epochs):
                 val_loss_wta += mse_loss(vp_means, tr_wta).item()
 
             validation_error_wta.append(val_loss_wta)
-            if val_loss_wta < min_val_loss_wta:
+            if val_loss_wta < min_val_loss_wta and epoch > 1e4:
                 min_val_loss_wta = val_loss_wta
                 print(f'(WTA)New best: {min_val_loss_wta}')
                 torch.save(model_wta.state_dict(), f'{root_folder}saved_models/wta_on_synth.pt')
