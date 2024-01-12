@@ -47,7 +47,7 @@ class CNP(nn.Module):
         # pred: (batch_size, n_t (<n_max_tar), 2*output_dim)
         # real: (batch_size, n_t (<n_max_tar), output_dim)
         pred_mean = pred[:, :, :self.output_dim]
-        pred_std = torch.exp(pred[:, :, self.output_dim:]) + 1e-50  # predicted value is log_std to ensure positivity, 1e-50 to avoid nan
+        pred_std = torch.nn.functional.softplus(torch.exp(pred[:, :, self.output_dim:]))  # predicted value is log_std. In comb. with softplus to ensure positivity
 
         pred_dist = torch.distributions.Normal(pred_mean, pred_std)
 

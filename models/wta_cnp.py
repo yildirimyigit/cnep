@@ -89,7 +89,7 @@ class WTA_CNP(nn.Module):
         # gate_vals: (batch_size, 1, num_decoders)
 
         pred_means = pred[:, :, :, :self.output_dim]
-        pred_stds = torch.exp(pred[:, :, :, self.output_dim:]) + 1e-50  # predicted value is log_std to ensure positivity, 1e-50 to avoid nan
+        pred_stds = torch.nn.functional.softplus(torch.exp(pred[:, :, :, self.output_dim:]))  # predicted value is log_std. In comb. with softplus to ensure positivity
 
         pred_dists = torch.distributions.Normal(pred_means, pred_stds)  # <num_decoders>-dimensional multivariate gaussian
         dec_loss = (-pred_dists.log_prob(real)).mean((-2, -1))  # (num_decoders, batch_size) - mean over tar and output_dim
