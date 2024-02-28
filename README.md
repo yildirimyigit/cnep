@@ -9,10 +9,14 @@ CNEP is a novel deep learning architecture for Learning from Demonstration (LfD)
 ![__over](https://github.com/yildirimyigit/cnep/assets/3774448/4147b4f6-f29c-499a-a119-a5fb31b10aae)
 
 ##### Some results:
-
-![comb_example_1](https://github.com/yildirimyigit/cnep/assets/3774448/f3bb7363-993e-4b30-97ae-3c52a229f8b0)
-
-
+<p align="center">
+<img src="https://github.com/yildirimyigit/cnep/blob/master/plots/start.gif" width="300px"/>  |  <img src="https://github.com/yildirimyigit/cnep/blob/master/plots/end.gif" width="300px"/> 
+</p>
+<hr>
+<p align="center">
+<img src="https://github.com/yildirimyigit/cnep/assets/3774448/f3bb7363-993e-4b30-97ae-3c52a229f8b0" width="80%" />
+</p>
+<hr>
 Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8m_ZZD7fpGOKclzVJONXUifDiY&si=vR7OLhx_rigMxdLK
 
 ## Getting Started
