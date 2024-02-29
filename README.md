@@ -33,7 +33,7 @@ However, most of the code should run cleanly with Python 3.8+ and Pytorch 2+. I 
 3. Upon training, run the corresponding test script: _comparison_sine.ipynb_
 4. Naming convention: files starting with _compare_ are training scripts whereas files starting with _comparison_ are test scripts.
 5. Files with the same name and different extensions:
-  - Files with .ipynb extension are good for inspection & visualization
-  - Files with .py extension are for running the code on a remote server (an HPC, for example).
+    1. Files with .ipynb extension are good for inspection & visualization
+    2. Files with .py extension are for running the code on a remote server (an HPC, for example).
 
 If you use the code in your work, please cite https://arxiv.org/abs/2402.08424
