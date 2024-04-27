@@ -110,7 +110,7 @@ class WTA_CNP(nn.Module):
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         ind_entropy = self.entropy(gate_vals).mean()  # scalar
 
-        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, losses.mean()
+        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, torch.min(losses)
    
     def scale_coefs(self):
         if self.num_decoders == 1:
