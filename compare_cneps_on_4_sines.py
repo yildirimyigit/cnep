@@ -144,14 +144,14 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model2 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=2, decoder_hidden_dims=[306,306,306], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer2 = torch.optim.Adam(lr=1e-4, params=model2.parameters())
+model2_ = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=2, decoder_hidden_dims=[306,306,306], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
 
-model4 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=4, decoder_hidden_dims=[201,201,201], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer4 = torch.optim.Adam(lr=1e-4, params=model4.parameters())
+model4_ = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=4, decoder_hidden_dims=[201,201,201], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer4 = torch.optim.Adam(lr=1e-4, params=model4_.parameters())
 
-model8 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=8, decoder_hidden_dims=[128,128,128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer8 = torch.optim.Adam(lr=1e-4, params=model8.parameters())
+model8_ = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=8, decoder_hidden_dims=[128,128,128], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer8 = torch.optim.Adam(lr=1e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
     total_num = 0
@@ -159,9 +159,14 @@ def get_parameter_count(model):
         total_num += param.shape.numel()
     return total_num
 
-print("cnep2:", get_parameter_count(model2))
-print("cnep4:", get_parameter_count(model4))
-print("cnep8:", get_parameter_count(model8))
+print("cnep2:", get_parameter_count(model2_))
+print("cnep4:", get_parameter_count(model4_))
+print("cnep8:", get_parameter_count(model8_))
+
+if torch.__version__ >= "2.0":
+    model2, model4, model8 = torch.compile(model2_), torch.compile(model4_), torch.compile(model8_)
+else:
+    model2, model4, model8 = model2_, model4_, model8_
 
 # %%
 import time
@@ -268,29 +273,26 @@ for epoch in range(epochs):
             if val_loss2 < min_vl2:
                 min_vl2 = val_loss2
                 print(f'New best 2: {min_vl2}')
-                torch.save(model2.state_dict(), f'{root_folder}saved_models/wta2.pt')
+                torch.save(model2_.state_dict(), f'{root_folder}saved_models/wta2.pt')
 
             if val_loss4 < min_vl4:
                 min_vl4 = val_loss4
                 print(f'New best 4: {min_vl4}')
-                torch.save(model4.state_dict(), f'{root_folder}saved_models/wta4.pt')
+                torch.save(model4_.state_dict(), f'{root_folder}saved_models/wta4.pt')
 
             if val_loss8 < min_vl8:
                 min_vl8 = val_loss8
                 print(f'New best 8: {min_vl8}')
-                torch.save(model8.state_dict(), f'{root_folder}saved_models/wta8.pt')
+                torch.save(model8_.state_dict(), f'{root_folder}saved_models/wta8.pt')
             
             print(f'Bests: {min_vl2}, {min_vl4}, {min_vl8}')
-  
-        # if epoch % (val_per_epoch*10) == 0:
-        #     draw_val_plot(root_folder, epoch)
 
     avg_loss2 += epoch_loss2
     avg_loss4 += epoch_loss4
     avg_loss8 += epoch_loss8
 
     if epoch % val_per_epoch == 0:
-        print("Epoch: {}, WTA-Losses: {}, {}, {}".format(epoch, avg_loss2/val_per_epoch, avg_loss4/val_per_epoch, avg_loss8/val_per_epoch))
+        print("Epoch: {}, CNEP Losses: {}, {}, {}".format(epoch, avg_loss2/val_per_epoch, avg_loss4/val_per_epoch, avg_loss8/val_per_epoch))
         avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
 
 torch.save(torch.Tensor(tl2), cnep_tl_path+'_2')
