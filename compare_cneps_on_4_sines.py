@@ -81,7 +81,7 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 # plt.title(f'Sine Wave of 3 Different Frequencies', fontsize=16)
 # plt.savefig(f'/home/yigit/papers/yildirim_23_ral/fig/3.png', bbox_inches='tight')
 
-# x0, y0 = x.to(device_wta), y.to(device_wta)
+x, y = x.to(device), y.to(device)
 # x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
 # %%
@@ -144,13 +144,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model2 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=2, decoder_hidden_dims=[306,306,306], batch_size=batch_size, scale_coefs=True).to(device)
+model2 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=2, decoder_hidden_dims=[306,306,306], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer2 = torch.optim.Adam(lr=1e-4, params=model2.parameters())
 
-model4 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=4, decoder_hidden_dims=[201,201,201], batch_size=batch_size, scale_coefs=True).to(device)
+model4 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=4, decoder_hidden_dims=[201,201,201], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer4 = torch.optim.Adam(lr=1e-4, params=model4.parameters())
 
-model8 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=8, decoder_hidden_dims=[128,128,128], batch_size=batch_size, scale_coefs=True).to(device)
+model8 = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=8, decoder_hidden_dims=[128,128,128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer8 = torch.optim.Adam(lr=1e-4, params=model8.parameters())
 
 def get_parameter_count(model):
