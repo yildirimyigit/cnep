@@ -172,6 +172,8 @@ else:
 import time
 import os
 
+torch._dynamo.config.verbose=True
+
 timestamp = int(time.time())
 root_folder = f'outputs/ablation/sines_4/2_4_8/{str(timestamp)}/'
 
@@ -251,17 +253,17 @@ for epoch in range(epochs):
             for j in range(v_epoch_iter):
                 prepare_masked_val_batch(vx, v_traj_ids[j])
 
-                p_wta, g_wta = model2(val_obs, val_tar_x, val_obs_mask)
+                p_wta, g_wta = model2.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss2 += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model4(val_obs, val_tar_x, val_obs_mask)
+                p_wta, g_wta = model4.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss4 += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model8(val_obs, val_tar_x, val_obs_mask)
+                p_wta, g_wta = model8.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss8 += mse_loss(vp_means, val_tar_y).item()

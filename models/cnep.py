@@ -78,11 +78,41 @@ class CNEP(nn.Module):
         r = (sum_masked_encoded_obs / sum_obs_mask).unsqueeze(1) # (batch_size, 1, encoder_hidden_dims[-1])
 
         # decoding
-        tar_num = tar.shape[1]
-        r_repeated = r.repeat(1, tar_num, 1)
+        r_repeated = r.repeat(1, self.m_max, 1)
         rep_tar = torch.cat([r_repeated, tar], dim=-1)
 
-        pred = torch.zeros(self.num_decoders, self.batch_size, tar_num, self.output_dim*2, device=self.device)
+        pred = torch.zeros(self.num_decoders, self.batch_size, self.m_max, self.output_dim*2, device=self.device)
+
+        for i in range(self.num_decoders):
+            pred[i] = self.decoders[i](rep_tar)
+
+        gate_vals = (self.gate(r)).squeeze(1)  # (batch_size, num_decoders)
+        if latent:
+            return pred, gate_vals, r
+        
+        return pred, gate_vals
+    
+    def val(self, obs, tar, obs_mask, latent=False):
+        # obs: (batch_size, n_max_obs, input_dim+output_dim)
+        # tar: (batch_size, t_steps, input_dim)
+        # obs_mask: (batch_size, n_max_obs)
+
+        # encoding
+        encoded_obs = self.encoder(obs)  # (batch_size,  encoder_hidden_dims[-1])
+        obs_mask_exp = obs_mask.unsqueeze(-1).type_as(encoded_obs)  # (batch_size, n_max_obs, 1)
+        masked_encoded_obs = encoded_obs * obs_mask_exp  # (batch_size, n_max_obs, encoder_hidden_dims[-1])
+
+        # masked mean
+        sum_masked_encoded_obs = masked_encoded_obs.sum(dim=1)  # (batch_size, encoder_hidden_dims[-1])
+        sum_obs_mask = obs_mask_exp.sum(dim=1) # (batch_size, 1)
+        r = (sum_masked_encoded_obs / sum_obs_mask).unsqueeze(1) # (batch_size, 1, encoder_hidden_dims[-1])
+
+        # decoding
+        n_tar = tar.shape[1]
+        r_repeated = r.repeat(1, n_tar, 1)
+        rep_tar = torch.cat([r_repeated, tar], dim=-1)
+
+        pred = torch.zeros(self.num_decoders, self.batch_size, n_tar, self.output_dim*2, device=self.device)
 
         for i in range(self.num_decoders):
             pred[i] = self.decoders[i](rep_tar)
