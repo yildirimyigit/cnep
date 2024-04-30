@@ -60,6 +60,8 @@ class CNEP(nn.Module):
             nn.Softmax(dim=-1)
         )
 
+        self.to(self.device)
+
     def forward(self, obs, tar, obs_mask, latent=False):
         # obs: (batch_size, n_max_obs, input_dim+output_dim)
         # tar: (batch_size, n_max_tar, input_dim)
