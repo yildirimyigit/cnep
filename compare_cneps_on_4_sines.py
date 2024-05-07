@@ -107,11 +107,11 @@ def prepare_masked_batch(t: list, traj_ids: list):
         permuted_ids = torch.randperm(t_steps)
         n_ids = permuted_ids[:n]
         m_ids = permuted_ids[n:n+m]
-        
+
         obs[i, :n, :dx] = traj[n_ids]
         obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
         obs_mask[i, :n] = True
-        
+
         tar_x[i, :m] = traj[m_ids]
         tar_y[i, :m] = (m_ids/t_steps).unsqueeze(1)
         tar_mask[i, :m] = True
@@ -135,22 +135,22 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         permuted_ids = torch.randperm(t_steps)
         n_ids = permuted_ids[:n]
         m_ids = torch.arange(t_steps)
-        
+
         val_obs[i, :n, :dx] = traj[n_ids]
         val_obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
         val_obs_mask[i, :n] = True
-        
+
         val_tar_x[i] = traj[m_ids]
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model2_ = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=2, decoder_hidden_dims=[306,306,306], batch_size=batch_size, scale_coefs=True, device=device)
+model2_ = CNEP(1, 1, n_max, n_max, [64, 64], num_decoders=2, decoder_hidden_dims=[130, 130], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
 
-model4_ = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=4, decoder_hidden_dims=[201,201,201], batch_size=batch_size, scale_coefs=True, device=device)
+model4_ = CNEP(1, 1, n_max, n_max, [64, 64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer4 = torch.optim.Adam(lr=1e-4, params=model4_.parameters())
 
-model8_ = CNEP(1, 1, n_max, n_max, [128,128,128], num_decoders=8, decoder_hidden_dims=[128,128,128], batch_size=batch_size, scale_coefs=True, device=device)
+model8_ = CNEP(1, 1, n_max, n_max, [64, 64], num_decoders=8, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer8 = torch.optim.Adam(lr=1e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
@@ -189,7 +189,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 5_000_000
+epochs = 2_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
