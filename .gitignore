@@ -1,6 +1,8 @@
 __pycache__/
 *.pt
 data/raw/
+data/baxter/
+data/forecast/
 out/
 *.out
 *.sh
