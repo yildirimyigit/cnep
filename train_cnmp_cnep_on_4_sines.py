@@ -30,16 +30,16 @@ print("Device :", device)
 
 # %%
 # Hyperparameters
-batch_size = 32
-n_max, m_max = 8, 8
+batch_size = 4
+n_max, m_max = 10, 10
 
 t_steps = 200
-num_demos = 128
+num_demos = 4
 num_classes = 4
 num_indiv = num_demos//num_classes  # number of demos per class
 dx, dy = 1, 1
 
-num_val = 32
+num_val = 4
 num_val_indiv = num_val//num_classes
 
 colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
@@ -200,7 +200,7 @@ for epoch in range(epochs):
     traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
 
     for i in range(epoch_iter):
-        prepare_masked_batch(x, traj_ids[i])
+        prepare_masked_batch(y, traj_ids[i])
 
         optimizer_cnmp.zero_grad()
         pred = cnmp(obs, tar_x, obs_mask)
@@ -229,7 +229,7 @@ for epoch in range(epochs):
             val_err_cnmp, val_err_cnep = 0, 0
 
             for j in range(v_epoch_iter):
-                prepare_masked_val_batch(vx, v_traj_ids[j])
+                prepare_masked_val_batch(vy, v_traj_ids[j])
 
                 p = cnmp.val(val_obs, val_tar_x, val_obs_mask)
                 vp_means = p[:, :, :dy]
