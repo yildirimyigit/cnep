@@ -164,7 +164,7 @@ class CNEP(nn.Module):
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
         ind_entropy = self.entropy(gate_vals).mean()  # scalar
 
-        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, torch.min(losses)
+        return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy + self.ind_entropy_coef*ind_entropy, torch.mean(losses)
    
    
     def scale_coefs(self):
