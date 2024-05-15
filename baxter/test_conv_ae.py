@@ -43,7 +43,7 @@ img_tf = transforms.Compose([
     transforms.Lambda(crop_left),  # Crop the left side
     transforms.Lambda(lambda x: x.convert('RGB')),  # Ensure the image is in RGB mode
     transforms.ToTensor(),  # Convert the image to a tensor
-    transforms.Resize((128, 128), antialias=True),  # Downsample to 120x120
+    transforms.Resize((64, 64), antialias=True),  # Downsample to 64x64
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize to range [-1, 1]
 ])
 
@@ -59,11 +59,11 @@ num_train = 24
 num_val = 8
 epoch_iter = num_train//batch_size
 v_epoch_iter = num_val//batch_size
-x = imgs[:num_train]
-vx = imgs[num_train:]
+x = imgs[:num_train].to(device)
+vx = imgs[num_train:].to(device)
 
 # %%
-model_ = ConvAE(filter_sizes=[1024,768,512,256])
+model_ = ConvAE(filter_sizes=[1536,1024,768,384]).to(device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
 if torch.__version__ >= "2.0":
@@ -82,7 +82,7 @@ if not os.path.exists(f'{root_folder}saved_model/'):
     os.makedirs(f'{root_folder}saved_model/')
 
 
-epochs = 5_000_000
+epochs = 1_000_000
 
 val_per_epoch = 200  # validation frequency
 min_val_error = 1_000_000
@@ -134,6 +134,10 @@ for epoch in range(epochs):
     if epoch % 100 == 0:
         print("Epoch: {}, Loss: {}".format(epoch, avg_loss_for_n_epochs/100))
         avg_loss_for_n_epochs = 0
+
+# %%
+# print the device model is on
+print(next(model.parameters()).device)
 
 # %%
 
