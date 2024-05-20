@@ -1,6 +1,11 @@
 # %%
 import matplotlib.pyplot as plt
 import seaborn as sns
+import sys, os
+
+folder_path = '../models/'
+if folder_path not in sys.path:
+    sys.path.append(folder_path)
 
 from models.cnep import CNEP
 from models.cnmp import CNMP
@@ -161,7 +166,6 @@ else:
 
 # %%
 import time
-import os
 
 timestamp = int(time.time())
 root_folder = f'outputs/sine/4_sine/cnmp_cnep/{str(timestamp)}/'
