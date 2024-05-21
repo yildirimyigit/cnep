@@ -44,62 +44,113 @@ vx = torch.linspace(0, 1, 200).repeat(v_num_demos, 1).unsqueeze(-1)
 y = torch.zeros((num_demos, x.shape[1], 2))
 vy = torch.zeros((v_num_demos, vx.shape[1], 2))
 
-for i in range(num_demos):
-    radius = 1 + 0.1 * torch.randn(1)  # Random radius variation
-    frequency = 1 + torch.randint(-1, 2, (1,)).item()  # Frequency variation
-    phase = torch.rand(1) * 2 * math.pi  # Random phase
-    mode_index = torch.randint(0, 8, (1,)).item()  # Random mode selection
+# radius_range = (1.2, 1.8) 
 
-    angle_offset = (2 * math.pi / 8) * mode_index  # Angle offset for each mode
-    y[i, :, 0] = (radius * torch.cos(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
-    y[i, :, 1] = (radius * torch.sin(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
+# for i in range(num_demos):
+#     radius = radius_range[0] + (radius_range[1] - radius_range[0]) * torch.rand(1) 
+#     frequency = 1 + torch.randint(-1, 2, (1,)).item()
+#     phase = torch.rand(1) * 2 * math.pi
+#     mode_index = torch.randint(0, 8, (1,)).item()
 
-    if i < v_num_demos:
-        radius = 1 + 0.1 * torch.randn(1)
-        frequency = 1 + torch.randint(-1, 2, (1,)).item()
-        phase = torch.rand(1) * 2 * math.pi
-        mode_index = torch.randint(0, 8, (1,)).item()
+#     angle_offset = (2 * math.pi / 8) * mode_index
+#     y[i, :, 0] = (radius * torch.cos(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
+#     y[i, :, 1] = (radius * torch.sin(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
 
-        angle_offset = (2 * math.pi / 8) * mode_index
-        vy[i, :, 0] = (radius * torch.cos(frequency * vx[0] + phase + angle_offset) + torch.randn(vx.shape[1:]) * 0.005).squeeze(-1)
-        vy[i, :, 1] = (radius * torch.sin(frequency * vx[0] + phase + angle_offset) + torch.randn(vx.shape[1:]) * 0.005).squeeze(-1)
+#     if i < v_num_demos:
+#         radius = radius_range[0] + (radius_range[1] - radius_range[0]) * torch.rand(1) 
+#         frequency = 1 + torch.randint(-1, 2, (1,)).item()
+#         phase = torch.rand(1) * 2 * math.pi
+#         mode_index = torch.randint(0, 8, (1,)).item()
+
+#         angle_offset = (2 * math.pi / 8) * mode_index
+#         vy[i, :, 0] = (radius * torch.cos(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
+#         vy[i, :, 1] = (radius * torch.sin(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
+
+def generate_trajectories(num_demos=100, num_points=200):
+    # Define x as a linspace tensor repeated for num_demos
+    x = torch.linspace(0, 1, num_points).repeat(num_demos, 1).unsqueeze(-1)
+
+    # Initialize y as a tensor to hold the trajectory data
+    y = torch.zeros(num_demos, num_points, 2)
+
+    # Define modes for the trajectories
+    modes = [
+        lambda x: torch.sin(2 * np.pi * x),
+        lambda x: torch.cos(2 * np.pi * x),
+        lambda x: 2 * torch.sin(4 * np.pi * x),
+        lambda x: 2 * torch.cos(4 * np.pi * x),
+        lambda x: torch.sin(2 * np.pi * x) + torch.cos(4 * np.pi * x),
+        lambda x: torch.cos(2 * np.pi * x) + torch.sin(4 * np.pi * x),
+        lambda x: 3 * torch.sin(2 * np.pi * x) - torch.cos(2 * np.pi * x),
+        lambda x: 3 * torch.cos(2 * np.pi * x) - torch.sin(2 * np.pi * x)
+    ]
+
+    # Assign each demo to a mode with some random variation
+    for i in range(num_demos):
+        mode = i % len(modes)
+        # Apply the mode function to x and add noise
+        y[i, :, 0] = modes[mode](x[i, :, 0]) + 0.1 * torch.randn(num_points)
+        y[i, :, 1] = modes[mode](x[i, :, 0]) + 0.1 * torch.randn(num_points)
+
+    return x, y
+
+# Generate trajectories
+x, y = generate_trajectories(num_demos=512)
+vx, vy = generate_trajectories(num_demos=128)
 
 print(x.shape, y.shape)
 print(vx.shape, vy.shape)
 
 # %%
-x_np = vx.numpy()  
-y_np = vy.numpy()
+x_np = x.numpy()  
+y_np = y.numpy()
 
 # Create a figure with two subplots sharing the y-axis
-fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
+# fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
 
-# Plot the first component (y[:,:,0])
-axs[0].plot(x_np[0], y_np[:, :, 0].T)  # Transpose to plot each trajectory separately
-axs[0].set_title('First Component (y[:,:,0])')
-axs[0].set_xlabel('x')
-axs[0].set_ylabel('y')
+# # Plot the first component (y[:,:,0])
+# axs[0].plot(x_np[0], y_np[:, :, 0].T)  # Transpose to plot each trajectory separately
+# axs[0].set_title('First Component (y[:,:,0])')
+# axs[0].set_xlabel('x')
+# axs[0].set_ylabel('y')
 
-# Plot the second component (y[:,:,1])
-axs[1].plot(x_np[0], y_np[:, :, 1].T) 
-axs[1].set_title('Second Component (y[:,:,1])')
-axs[1].set_xlabel('x')
+# # Plot the second component (y[:,:,1])
+# axs[1].plot(x_np[0], y_np[:, :, 1].T) 
+# axs[1].set_title('Second Component (y[:,:,1])')
+# axs[1].set_xlabel('x')
 
-plt.tight_layout()  # Adjust layout for better spacing
+# plt.tight_layout()  # Adjust layout for better spacing
+# plt.show()
+
+# Create a 3D plot
+fig = plt.figure(figsize=(10, 8))  # Adjust figure size as needed
+ax = fig.add_subplot(111, projection='3d')
+
+# Plot the 3D trajectories
+for i in range(y_np.shape[0]):  # Iterate over each trajectory
+    ax.plot3D(x_np[0,:,0], y_np[i, :, 0], y_np[i, :, 1])
+
+# Set labels and title
+ax.set_xlabel('x')
+ax.set_ylabel('y (vy[:, :, 0])')
+ax.set_zlabel('z (vy[:, :, 1])')
+ax.set_title('3D Trajectories')
+
+# Show the plot
 plt.show()
 
 # %%
 # Hyperparameters
-batch_size = 32
+batch_size = 64
 n_max, m_max = 10, 10
 
 t_steps = 200
-num_demos = 128
+num_demos = 512
 num_classes = 8
 num_indiv = num_demos//num_classes  # number of demos per class
 dx, dy = 1, 2
 
-num_val = 32
+num_val = 128
 num_val_indiv = num_val//num_classes
 
 colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
