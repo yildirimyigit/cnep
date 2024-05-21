@@ -11,13 +11,13 @@ else:
 print("device:", device)
 
 # %%
-batch_size = 32
+batch_size = 64
 n_max, m_max = 10, 10
 t_steps = 200
 
 num_train, num_val = 1024, 128
 
-dx, dy = 20, 20
+dx, dy = 10, 10
 
 def continuous_function(x):
     y = torch.sin(x) + torch.cos(x)**2 + torch.tanh(x)
@@ -37,11 +37,11 @@ print(x.shape, y.shape)
 print(vx.shape, vy.shape)
 
 # %%
-model = CNP(input_dim=dx, hidden_dim=512, output_dim=dy, n_max_obs=n_max, n_max_tar=m_max, num_layers=3, batch_size=batch_size).to(device)
-optimizer = torch.optim.Adam(lr=1e-4, params=model.parameters())
+model_ = CNP(input_dim=dx, hidden_dim=512, output_dim=dy, n_max_obs=n_max, n_max_tar=m_max, num_layers=3, batch_size=batch_size).to(device)
+optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-# if torch.__version__ >= "2.0":
-#     model = torch.compile(model_)
+if torch.__version__ >= "2.0":
+    model = torch.compile(model_)
 
 # %%
 def get_batch(x, y, traj_ids, device=device):
@@ -85,7 +85,7 @@ def get_validation_batch(vx, vy, traj_ids, device=device):
 import time
 import os
 
-# torch._dynamo.config.suppress_errors = True
+torch._dynamo.config.suppress_errors = True
 
 timestamp = int(time.time())
 root_folder = f'outputs/test/{str(timestamp)}/'
@@ -102,7 +102,7 @@ if not os.path.exists(f'{root_folder}saved_model/'):
 # torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 5_000#_000
+epochs = 5_000_000
 epoch_iter = num_train//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 
@@ -124,6 +124,7 @@ for epoch in range(epochs):
 
     for i in range(epoch_iter):
         optimizer.zero_grad()
+
         obs, tar_x, tar_y = get_batch(x, y, traj_ids[i], device)
 
         pred, _ = model(obs, tar_x)
@@ -154,7 +155,7 @@ for epoch in range(epochs):
             if val_loss < min_val_loss and epoch > 5e3:
                 min_val_loss = val_loss
                 print(f'New best: {min_val_loss}')
-                torch.save(model.state_dict(), f'{root_folder}saved_model/best.pt')
+                torch.save(model_.state_dict(), f'{root_folder}saved_model/best.pt')
 
     avg_loss += epoch_loss
 
