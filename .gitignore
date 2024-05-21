@@ -16,3 +16,6 @@ nohup.out*
 catkin_ws/
 .vscode/
 build/
+mp_comparison/Stable-Motion-Primitives-via-Imitation-and-Contrastive-Learning/
+results/
+
