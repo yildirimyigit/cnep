@@ -123,21 +123,21 @@ y_np = y.numpy()
 # plt.show()
 
 # Create a 3D plot
-fig = plt.figure(figsize=(10, 8))  # Adjust figure size as needed
-ax = fig.add_subplot(111, projection='3d')
+#fig = plt.figure(figsize=(10, 8))  # Adjust figure size as needed
+#ax = fig.add_subplot(111, projection='3d')
 
 # Plot the 3D trajectories
-for i in range(y_np.shape[0]):  # Iterate over each trajectory
-    ax.plot3D(x_np[0,:,0], y_np[i, :, 0], y_np[i, :, 1])
+#for i in range(y_np.shape[0]):  # Iterate over each trajectory
+#    ax.plot3D(x_np[0,:,0], y_np[i, :, 0], y_np[i, :, 1])
 
 # Set labels and title
-ax.set_xlabel('x')
-ax.set_ylabel('y (vy[:, :, 0])')
-ax.set_zlabel('z (vy[:, :, 1])')
-ax.set_title('3D Trajectories')
+#ax.set_xlabel('x')
+#ax.set_ylabel('y (vy[:, :, 0])')
+#ax.set_zlabel('z (vy[:, :, 1])')
+#ax.set_title('3D Trajectories')
 
 # Show the plot
-plt.show()
+#plt.show()
 
 # %%
 # Hyperparameters
