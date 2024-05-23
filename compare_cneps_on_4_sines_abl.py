@@ -145,13 +145,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+model_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-model0_ = CNEP_ABL0(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP_ABL0(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
 
-model1_ = CNEP_ABL1(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP_ABL1(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
 
 
@@ -165,7 +165,7 @@ import time
 import os
 
 timestamp = int(time.time())
-root_folder = f'outputs/ablation/sines_4/org_0_1/{str(timestamp)}/'
+root_folder = f'outputs/ablation/sines_4/orig_0_1/{str(timestamp)}/'
 
 if not os.path.exists(root_folder):
     os.makedirs(root_folder)
@@ -182,21 +182,21 @@ torch.save(y, f'{root_folder}y.pt')
 epochs = 1_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
-avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
+avg_loss, avg_loss0, avg_loss1 = 0, 0, 0
 
 val_per_epoch = 1000
-min_vl2, min_vl4, min_vl8 = 1000000, 1000000, 1000000
+min_vl, min_vl0, min_vl1 = 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
 
-tl2, tl4, tl8 = [], [], []
-ve2, ve4, ve8 = [], [], []
+tl, tl0, tl1 = [], [], []
+ve, ve0, ve1 = [], [], []
 
 cnep_tl_path = f'{root_folder}cnep_training_loss.pt'
 cnep_ve_path = f'{root_folder}cnep_validation_error.pt'
 
 for epoch in range(epochs):
-    epoch_loss2, epoch_loss4, epoch_loss8 = 0, 0, 0
+    epoch_loss, epoch_loss0, epoch_loss1 = 0, 0, 0
 
     traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
 
@@ -204,41 +204,41 @@ for epoch in range(epochs):
         prepare_masked_batch(x, traj_ids[i])
 
         optimizer.zero_grad()
-        pred2, gate2 = model(obs, tar_x, obs_mask)
-        loss2, nll2 = model.loss(pred2, gate2, tar_y, tar_mask)
-        loss2.backward()
+        pred, gate = model(obs, tar_x, obs_mask)
+        loss, nll = model.loss(pred, gate, tar_y, tar_mask)
+        loss.backward()
         optimizer.step()
 
 
         optimizer0.zero_grad()
-        pred4, gate4 = model0(obs, tar_x, obs_mask)
-        loss4, nll4 = model0.loss(pred4, gate4, tar_y, tar_mask)
-        loss4.backward()
+        pred0, gate0 = model0(obs, tar_x, obs_mask)
+        loss0, nll0 = model0.loss(pred0, gate0, tar_y, tar_mask)
+        loss0.backward()
         optimizer0.step()
 
 
         optimizer1.zero_grad()
-        pred8, gate8 = model1(obs, tar_x, obs_mask)
-        loss8, nll8 = model1.loss(pred8, gate8, tar_y, tar_mask)
-        loss8.backward()
+        pred1, gate1 = model1(obs, tar_x, obs_mask)
+        loss1, nll1 = model1.loss(pred1, gate1, tar_y, tar_mask)
+        loss1.backward()
         optimizer1.step()
 
-        epoch_loss2 += nll2.item()
-        epoch_loss4 += nll4.item()
-        epoch_loss8 += nll8.item()
+        epoch_loss += nll.item()
+        epoch_loss0 += nll0.item()
+        epoch_loss1 += nll1.item()
 
-    epoch_loss2 = epoch_loss2/epoch_iter
-    epoch_loss4 = epoch_loss4/epoch_iter
-    epoch_loss8 = epoch_loss8/epoch_iter
+    epoch_loss = epoch_loss/num_demos
+    epoch_loss0 = epoch_loss0/num_demos
+    epoch_loss1 = epoch_loss1/num_demos
 
-    tl2.append(epoch_loss2)
-    tl4.append(epoch_loss4)
-    tl8.append(epoch_loss8)
+    tl.append(epoch_loss)
+    tl0.append(epoch_loss0)
+    tl1.append(epoch_loss1)
 
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
             v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
-            val_loss2, val_loss4, val_loss8 = 0, 0, 0
+            val_loss, val_loss0, val_loss1 = 0, 0, 0
 
             for j in range(v_epoch_iter):
                 prepare_masked_val_batch(vx, v_traj_ids[j])
@@ -246,53 +246,57 @@ for epoch in range(epochs):
                 p_wta, g_wta = model.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
-                val_loss2 += mse_loss(vp_means, val_tar_y).item()
+                val_loss += mse_loss(vp_means, val_tar_y).item()
 
                 p_wta, g_wta = model0.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
-                val_loss4 += mse_loss(vp_means, val_tar_y).item()
+                val_loss0 += mse_loss(vp_means, val_tar_y).item()
 
                 p_wta, g_wta = model1.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
-                val_loss8 += mse_loss(vp_means, val_tar_y).item()
+                val_loss1 += mse_loss(vp_means, val_tar_y).item()
 
-            ve2.append(val_loss2)
-            ve4.append(val_loss4)
-            ve8.append(val_loss8)
+            val_loss /= num_val
+            val_loss0 /= num_val
+            val_loss1 /= num_val
 
-            if val_loss2 < min_vl2:
-                min_vl2 = val_loss2
-                print(f'New best org: {min_vl2}')
+            ve.append(val_loss)
+            ve0.append(val_loss0)
+            ve1.append(val_loss1)
+
+            if val_loss < min_vl:
+                min_vl = val_loss
+                print(f'New best Orig: {min_vl}')
                 torch.save(model_.state_dict(), f'{root_folder}saved_models/org.pt')
 
-            if val_loss4 < min_vl4:
-                min_vl4 = val_loss4
-                print(f'New best 0: {min_vl4}')
-                torch.save(model0_.state_dict(), f'{root_folder}saved_models/wta4.pt')
+            if val_loss0 < min_vl0:
+                min_vl0 = val_loss0
+                print(f'New best Abl 0: {min_vl0}')
+                torch.save(model0_.state_dict(), f'{root_folder}saved_models/abl0.pt')
 
-            if val_loss8 < min_vl8:
-                min_vl8 = val_loss8
-                print(f'New best 1: {min_vl8}')
-                torch.save(model1_.state_dict(), f'{root_folder}saved_models/wta8.pt')
+            if val_loss1 < min_vl1:
+                min_vl1 = val_loss1
+                print(f'New best Abl 1: {min_vl1}')
+                torch.save(model1_.state_dict(), f'{root_folder}saved_models/abl1.pt')
             
-            print(f'Bests: {min_vl2}, {min_vl4}, {min_vl8}')
+            print(f'Bests: {min_vl}, {min_vl0}, {min_vl1}')
 
-    avg_loss2 += epoch_loss2
-    avg_loss4 += epoch_loss4
-    avg_loss8 += epoch_loss8
+    avg_loss += epoch_loss
+    avg_loss0 += epoch_loss0
+    avg_loss1 += epoch_loss1
 
     if epoch % val_per_epoch == 0:
-        print("Epoch: {}, CNEP Losses: {}, {}, {}".format(epoch, avg_loss2/val_per_epoch, avg_loss4/val_per_epoch, avg_loss8/val_per_epoch))
-        avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
+        print("Epoch: {}, Orig: {}, Abl0: {}, Abl1: {}".format(epoch, avg_loss/val_per_epoch, avg_loss0/val_per_epoch, avg_loss1/val_per_epoch))
+        avg_loss, avg_loss0, avg_loss1 = 0, 0, 0
 
-torch.save(torch.Tensor(tl2), cnep_tl_path+'_2')
-torch.save(torch.Tensor(ve2), cnep_ve_path+'_2')
-torch.save(torch.Tensor(tl4), cnep_tl_path+'_4')
-torch.save(torch.Tensor(ve4), cnep_ve_path+'_4')
-torch.save(torch.Tensor(tl8), cnep_tl_path+'_8')
-torch.save(torch.Tensor(ve8), cnep_ve_path+'_8')
+torch.save(torch.Tensor(tl), cnep_tl_path)
+torch.save(torch.Tensor(ve), cnep_ve_path)
+torch.save(torch.Tensor(tl0), cnep_tl_path+'_abl0')
+torch.save(torch.Tensor(ve0), cnep_ve_path+'_abl0')
+torch.save(torch.Tensor(tl1), cnep_tl_path+'_abl1')
+torch.save(torch.Tensor(ve1), cnep_ve_path+'_abl1')
 
 # %%
 
