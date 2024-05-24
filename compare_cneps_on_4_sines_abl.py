@@ -43,25 +43,26 @@ num_val = 32
 num_val_indiv = num_val//num_classes
 
 # %%
-num_demos, v_num_demos = 128, 32
-x = torch.linspace(0, 1, 200).repeat(num_demos, 1).unsqueeze(-1)
-vx = torch.linspace(0, 1, 200).repeat(v_num_demos, 1).unsqueeze(-1)
-y = torch.zeros((num_demos, x.shape[1], 1))
-vy = torch.zeros((v_num_demos, vx.shape[1], 1))
+x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
+y = torch.zeros(num_demos, t_steps, dy)
 
-frequencies = [1, 2.5, 4, 5.5]  # Example frequencies
-amplitudes = [1.5, 1, 0.8, 0.6]  # Example amplitudes
-phases = [0, torch.pi / 2, torch.pi, 3 * torch.pi / 2]  # Example phases
+vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
+vy = torch.zeros(num_val, t_steps, dy)
 
+for i in range(num_classes):
+    start_ind = i*num_indiv
+    coeff = (i+1)/2*torch.pi
+    y[start_ind:start_ind+num_indiv] = (torch.unsqueeze(generate_sin(x*coeff), 2) +1)/2.0
 
-for i in range(num_demos):
-    y[i, :, 0] = amplitudes[i%2] * torch.sin(2 * torch.pi * frequencies[i%2] * x[i, :, 0] + phases[i%2]) + torch.randn(1) * 0.15
-for i in range(v_num_demos):
-    vy[i, :, 0] = amplitudes[i%2] * torch.sin(2 * torch.pi * frequencies[i%2] * vx[i, :, 0] + phases[i%2]) + torch.randn(1) * 0.15
+    noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*1e-4**0.5, min=0) - noise_clip, -1)
 
+    start_val_ind = i*num_val_indiv
+    start_ind = i*num_indiv
+    vy[start_val_ind:start_val_ind+num_val_indiv] = y[start_ind:start_ind+num_val_indiv].clone() + noise
+
+x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
+vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
-x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
-
 
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
 tar_x = torch.zeros((batch_size, m_max, dx), dtype=torch.float32, device=device)
@@ -122,13 +123,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-model0_ = CNEP_ABL0(1, 1, n_max, m_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP_ABL0(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
 
-model1_ = CNEP_ABL1(1, 1, n_max, m_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP_ABL1(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
 
 
@@ -142,7 +143,7 @@ import time
 import os
 
 timestamp = int(time.time())
-root_folder = f'outputs/ablation/sines_2/orig_0_1/{str(timestamp)}/'
+root_folder = f'outputs/ablation/sines_4/orig_0_1/{str(timestamp)}/'
 
 if not os.path.exists(root_folder):
     os.makedirs(root_folder)
@@ -156,7 +157,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 5_000_000
+epochs = 1_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss, avg_loss0, avg_loss1 = 0, 0, 0

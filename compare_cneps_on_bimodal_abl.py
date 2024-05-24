@@ -34,7 +34,7 @@ n_max, m_max = 10, 10  # max number of points in context set and target set
 
 t_steps = 200
 num_demos = 128
-num_classes = 4
+num_classes = 2
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
@@ -43,11 +43,10 @@ num_val = 32
 num_val_indiv = num_val//num_classes
 
 # %%
-num_demos, v_num_demos = 128, 32
 x = torch.linspace(0, 1, 200).repeat(num_demos, 1).unsqueeze(-1)
-vx = torch.linspace(0, 1, 200).repeat(v_num_demos, 1).unsqueeze(-1)
+vx = torch.linspace(0, 1, 200).repeat(num_val, 1).unsqueeze(-1)
 y = torch.zeros((num_demos, x.shape[1], 1))
-vy = torch.zeros((v_num_demos, vx.shape[1], 1))
+vy = torch.zeros((num_val, vx.shape[1], 1))
 
 frequencies = [1, 2.5, 4, 5.5]  # Example frequencies
 amplitudes = [1.5, 1, 0.8, 0.6]  # Example amplitudes
@@ -56,13 +55,12 @@ phases = [0, torch.pi / 2, torch.pi, 3 * torch.pi / 2]  # Example phases
 
 for i in range(num_demos):
     y[i, :, 0] = amplitudes[i%2] * torch.sin(2 * torch.pi * frequencies[i%2] * x[i, :, 0] + phases[i%2]) + torch.randn(1) * 0.05
-for i in range(v_num_demos):
+for i in range(num_val):
     vy[i, :, 0] = amplitudes[i%2] * torch.sin(2 * torch.pi * frequencies[i%2] * vx[i, :, 0] + phases[i%2]) + torch.randn(1) * 0.05
 
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
 
-# %%
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
 tar_x = torch.zeros((batch_size, m_max, dx), dtype=torch.float32, device=device)
 tar_y = torch.zeros((batch_size, m_max, dy), dtype=torch.float32, device=device)
@@ -122,13 +120,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-model0_ = CNEP_ABL0(1, 1, n_max, m_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP_ABL0(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
 
-model1_ = CNEP_ABL1(1, 1, n_max, m_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP_ABL1(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
 
 
@@ -142,7 +140,7 @@ import time
 import os
 
 timestamp = int(time.time())
-root_folder = f'outputs/ablation/sines_4/orig_0_1/{str(timestamp)}/'
+root_folder = f'outputs/ablation/sines_2/orig_0_1/{str(timestamp)}/'
 
 if not os.path.exists(root_folder):
     os.makedirs(root_folder)
