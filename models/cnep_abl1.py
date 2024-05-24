@@ -162,7 +162,7 @@ class CNEP_ABL1(nn.Module):
 
         #############
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
-        ind_entropy = self.entropy(gate_vals).mean()  # scalar
+        # ind_entropy = self.entropy(gate_vals).mean()  # scalar
 
         return self.nll_coef*nll - self.batch_entropy_coef*batch_entropy, torch.mean(losses)
    

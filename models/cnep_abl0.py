@@ -157,8 +157,8 @@ class CNEP_ABL0(nn.Module):
 
         #############
         # Overall entropy. We want to increase entropy; i.e. for a batch, the model should use all decoders not just one
-        gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
-        batch_entropy = self.entropy(gate_means)  # scalar
+        # gate_means = torch.mean(gate_vals, dim=0).squeeze(-1).squeeze(-1)
+        # batch_entropy = self.entropy(gate_means)  # scalar
 
         #############
         # Gate std: sometimes all gates are the same, we want to penalize low std; i.e we want to increase std
