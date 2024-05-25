@@ -123,13 +123,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
 
 # %%
-model_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-model0_ = CNEP_ABL0(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP_ABL0(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
 
-model1_ = CNEP_ABL1(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP_ABL1(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
 
 
@@ -157,7 +157,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 1_000_000
+epochs = 10_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss, avg_loss0, avg_loss1 = 0, 0, 0
@@ -221,19 +221,19 @@ for epoch in range(epochs):
             for j in range(v_epoch_iter):
                 prepare_masked_val_batch(vx, v_traj_ids[j])
 
-                p_wta, g_wta = model.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model0.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model0.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss0 += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model1.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model1.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss1 += mse_loss(vp_means, val_tar_y).item()
 
 
