@@ -1,7 +1,5 @@
 # %%
 from models.cnep import CNEP
-from models.cnep_abl0 import CNEP_ABL0
-from models.cnep_abl1 import CNEP_ABL1
 
 from data.data_generators import *
 import torch
@@ -126,10 +124,12 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
 model_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-model0_ = CNEP_ABL0(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model0_.batch_entropy_coef = 0.0
 optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
 
-model1_ = CNEP_ABL1(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model1_.ind_entropy_coef = 0.0
 optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
 
 
