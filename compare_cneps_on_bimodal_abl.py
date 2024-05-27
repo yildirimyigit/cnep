@@ -5,7 +5,6 @@ from models.cnmp import CNMP
 from data.data_generators import *
 import torch
 
-
 torch.set_float32_matmul_precision('high')
 
 def get_free_gpu():
@@ -61,22 +60,20 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
 
 # %%
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
-sns.set_palette('tab10')
+# colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
+# sns.set_palette('tab10')
 
-plt.figure(figsize=(6, 4))
-for i in range(num_demos):
-    plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), color=colors[i%num_classes], alpha=0.5)
-    # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
+# plt.figure(figsize=(6, 4))
+# for i in range(num_demos):
+#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), color=colors[i%num_classes], alpha=0.5)
+#     # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
 
-# plt.legend(loc='lower left', fontsize=14)
-plt.grid(True)
-plt.xlabel('Time (s)', fontsize=14)
-plt.ylabel('Amplitude', fontsize=14)
-plt.title(f'Sine Waves', fontsize=16)
+# # plt.legend(loc='lower left', fontsize=14)
+# plt.grid(True)
+# plt.xlabel('Time (s)', fontsize=14)
+# plt.ylabel('Amplitude', fontsize=14)
+# plt.title(f'Sine Waves', fontsize=16)
 
 # %%
 # import numpy as np
@@ -256,7 +253,7 @@ for epoch in range(epochs):
 
         optimizer3.zero_grad()
         pred3 = cnmp(obs, tar_x, obs_mask)
-        nll3 = cnmp.loss(pred, tar_y, tar_mask)
+        nll3 = cnmp.loss(pred3, tar_y, tar_mask)
         nll3.backward()
         optimizer3.step()
 
@@ -286,24 +283,24 @@ for epoch in range(epochs):
             for j in range(v_epoch_iter):
                 prepare_masked_val_batch(vx, v_traj_ids[j])
 
-                p_wta, g_wta = model.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model0.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model0.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss0 += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model1.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model1.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss1 += mse_loss(vp_means, val_tar_y).item()
 
-                p_wta, g_wta = model2.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
-                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                p, g = model2.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g.squeeze(1), dim=-1)
+                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss2 += mse_loss(vp_means, val_tar_y).item()
 
                 p = cnmp.val(val_obs, val_tar_x, val_obs_mask)
