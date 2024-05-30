@@ -42,9 +42,9 @@ def crop_left(im):
 img_tf = transforms.Compose([
     transforms.Lambda(crop_left),  # Crop the left side
     transforms.Lambda(lambda x: x.convert('RGB')),  # Ensure the image is in RGB mode
+    transforms.Resize(size=(128, 96), antialias=True),  # Downsample to 128xH
+    transforms.Pad(padding=(16, 0, 16, 0)), # Pad to 128x128
     transforms.ToTensor(),  # Convert the image to a tensor
-    transforms.Resize(size=128, antialias=True),  # Downsample to 128xH
-    transforms.Pad(padding=(0,16, 0, 16)), # Pad to 128x128
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize to range [-1, 1]
 ])
 
