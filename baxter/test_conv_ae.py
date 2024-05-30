@@ -31,19 +31,20 @@ else:
 print("Device :", device)
 
 # %%
-batch_size = 8
+batch_size = 16
 data = []
 
-img_folder = '/home/yigit/projects/cnep/baxter/data/img/'
+img_folder = '/home/yigit/projects/cnep/baxter/data/images/'
 
 def crop_left(im): 
-    return transforms.functional.crop(im, top=0, left=0, height=480, width=480)
+    return transforms.functional.crop(im, top=0, left=0, height=420, width=560)
 
 img_tf = transforms.Compose([
     transforms.Lambda(crop_left),  # Crop the left side
     transforms.Lambda(lambda x: x.convert('RGB')),  # Ensure the image is in RGB mode
     transforms.ToTensor(),  # Convert the image to a tensor
-    transforms.Resize((64, 64), antialias=True),  # Downsample to 64x64
+    transforms.Resize(size=128, antialias=True),  # Downsample to 128xH
+    transforms.Pad(padding=(0,16, 0, 16)), # Pad to 128x128
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize to range [-1, 1]
 ])
 
@@ -55,8 +56,8 @@ for filename in os.listdir(img_folder):
 
 imgs = torch.stack(data, dim=0)
 
-num_train = 24
-num_val = 8
+num_train = 184
+num_val = 16
 epoch_iter = num_train//batch_size
 v_epoch_iter = num_val//batch_size
 x = imgs[:num_train].to(device)
@@ -82,9 +83,9 @@ if not os.path.exists(f'{root_folder}saved_model/'):
     os.makedirs(f'{root_folder}saved_model/')
 
 
-epochs = 1_000_000
+epochs = 5_000_000
 
-val_per_epoch = 200  # validation frequency
+val_per_epoch = 500  # validation frequency
 min_val_error = 1_000_000
 
 mse_loss = torch.nn.MSELoss()
