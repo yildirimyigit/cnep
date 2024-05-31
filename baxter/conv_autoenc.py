@@ -64,3 +64,6 @@ class ConvAE(nn.Module):
 
     def loss(self, prediction, target):
         return F.mse_loss(prediction, target)
+    
+    def encode(self, x):
+        return self.encoder(x)
