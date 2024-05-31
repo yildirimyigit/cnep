@@ -65,7 +65,7 @@ vx = imgs[num_train:].to(device)
 
 # %%
 model_ = ConvAE(filter_sizes=[1536,1024,768,384]).to(device)
-optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
+optimizer = torch.optim.Adam(lr=3e-4, params=model_.parameters())
 
 if torch.__version__ >= "2.0":
     model = torch.compile(model_)
@@ -130,11 +130,13 @@ for epoch in range(epochs):
             if val_epoch_err < min_val_error:
                 min_val_error = val_epoch_err
                 print(f'New best: {min_val_error}')
-                torch.save(model_.state_dict(), f'{root_folder}saved_model/cae.pt')
+                torch.save(model_.state_dict(), f'{root_folder}saved_model/best_cae.pt')
 
     if epoch % 100 == 0:
         print("Epoch: {}, Loss: {}".format(epoch, avg_loss_for_n_epochs/100))
         avg_loss_for_n_epochs = 0
+        if epoch % 1000 == 0:
+            torch.save(model_.state_dict(), f'{root_folder}saved_model/last_cae.pt')
 
 # %%
 # print the device model is on
