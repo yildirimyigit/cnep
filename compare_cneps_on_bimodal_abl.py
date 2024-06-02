@@ -5,6 +5,7 @@ from models.cnmp import CNMP
 from data.data_generators import *
 import torch
 
+
 torch.set_float32_matmul_precision('high')
 
 def get_free_gpu():
@@ -60,6 +61,8 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
 
 # %%
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 # colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
 # sns.set_palette('tab10')
@@ -75,28 +78,7 @@ x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
 # plt.ylabel('Amplitude', fontsize=14)
 # plt.title(f'Sine Waves', fontsize=16)
 
-# %%
-# import numpy as np
-# import os
 
-# save_path = 'data/synthetic/bimodal'
-
-# if not os.path.exists(save_path):
-#     os.makedirs(save_path)
-# try:
-#     os.makedirs(f'{save_path}_0')
-#     os.makedirs(f'{save_path}_1')
-# except:
-#     pass
-
-# for i in range(num_demos):
-#     traj = np.zeros((1, t_steps, 2))
-#     traj[0, :, 0] = x[i, :, 0].cpu().numpy()
-#     traj[0, :, 1] = y[i, :, 0].cpu().numpy()
-        
-#     np.save(f'{save_path}_{i%num_classes}/{i//num_classes}.npy', traj)
-
-# %%
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
 tar_x = torch.zeros((batch_size, m_max, dx), dtype=torch.float32, device=device)
 tar_y = torch.zeros((batch_size, m_max, dy), dtype=torch.float32, device=device)
@@ -120,12 +102,12 @@ def prepare_masked_batch(t: list, traj_ids: list):
         n_ids = permuted_ids[:n]
         m_ids = permuted_ids[n:n+m]
         
-        obs[i, :n, :dx] = traj[n_ids]
-        obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
+        obs[i, :n, :dx] = (n_ids/t_steps).unsqueeze(1)
+        obs[i, :n, dx:] = traj[n_ids]
         obs_mask[i, :n] = True
         
-        tar_x[i, :m] = traj[m_ids]
-        tar_y[i, :m] = (m_ids/t_steps).unsqueeze(1)
+        tar_x[i, :m] = (m_ids/t_steps).unsqueeze(1)
+        tar_y[i, :m] = traj[m_ids]
         tar_mask[i, :m] = True
 
 val_obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
@@ -148,12 +130,12 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         n_ids = permuted_ids[:n]
         m_ids = torch.arange(t_steps)
         
-        val_obs[i, :n, :dx] = traj[n_ids]
-        val_obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
+        val_obs[i, :n, :dx] = (n_ids/t_steps).unsqueeze(1)
+        val_obs[i, :n, dx:] = traj[n_ids]
         val_obs_mask[i, :n] = True
         
-        val_tar_x[i] = traj[m_ids]
-        val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
+        val_tar_x[i] = (m_ids/t_steps).unsqueeze(1)
+        val_tar_y[i] = traj[m_ids]
 
 # %%
 model_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
@@ -172,9 +154,18 @@ optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
 model2_.batch_entropy_coef = 0.0
 model2_.ind_entropy_coef = 0.0
 
-cnmp_ = CNMP(1, 1, n_max, m_max, [160,160], decoder_hidden_dims=[160,160], batch_size=batch_size, device=device)
+cnmp_ = CNMP(1, 1, n_max, m_max, [158,158], decoder_hidden_dims=[158,158], batch_size=batch_size, device=device)
 optimizer3 = torch.optim.Adam(lr=1e-4, params=cnmp_.parameters())
 
+
+# def get_parameter_count(model):
+#     total_num = 0
+#     for param in model.parameters():
+#         total_num += param.shape.numel()
+#     return total_num
+
+# print("cnep:", get_parameter_count(model_))
+# print("cnmp:", get_parameter_count(cnmp_))
 
 if torch.__version__ >= "2.0":
     model, model0, model1, model2, cnmp = torch.compile(model_), torch.compile(model0_), torch.compile(model1_), torch.compile(model2_), torch.compile(cnmp_)
