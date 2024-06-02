@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+torch._dynamo.config.cache_size_limit = 64
 
 '''
 Convolutional Autoencoder for processing images on Baxter
