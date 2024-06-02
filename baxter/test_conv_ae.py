@@ -19,7 +19,7 @@ def get_free_gpu():
     gpu_util.sort(key=lambda x: x[1])
     return gpu_util[0][0]
 
-if torch.cuda.is_available():
+if torch.cuda.is_available() and False:
     available_gpu = get_free_gpu()
     if available_gpu == 0:
         device = torch.device("cuda:0")
@@ -31,7 +31,7 @@ else:
 print("Device :", device)
 
 # %%
-batch_size = 16
+batch_size = 32
 data = []
 
 img_folder = '/home/yigit/projects/cnep/baxter/data/images/'
@@ -56,15 +56,17 @@ for filename in os.listdir(img_folder):
 
 imgs = torch.stack(data, dim=0)
 
-num_train = 184
-num_val = 16
+num_train = 304
+num_val = 32
 epoch_iter = num_train//batch_size
 v_epoch_iter = num_val//batch_size
 x = imgs[:num_train].to(device)
 vx = imgs[num_train:].to(device)
 
+print(x.shape, vx.shape)
+
 # %%
-model_ = ConvAE(filter_sizes=[1536,1024,768,384]).to(device)
+model_ = ConvAE(filter_sizes=[2048,1536,1024,512]).to(device)
 optimizer = torch.optim.Adam(lr=3e-4, params=model_.parameters())
 
 if torch.__version__ >= "2.0":
@@ -118,11 +120,11 @@ for epoch in range(epochs):
 
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
-            v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
+            v_img_ids = torch.randperm(num_val)[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
             val_epoch_err = 0
 
             for j in range(v_epoch_iter):
-                vinput = vx[v_traj_ids[j]]
+                vinput = vx[v_img_ids[j]]
                 vpred = model(vinput)
                 vloss = model.loss(vpred, vinput)
                 val_epoch_err += vloss.item()
@@ -137,12 +139,3 @@ for epoch in range(epochs):
         avg_loss_for_n_epochs = 0
         if epoch % 1000 == 0:
             torch.save(model_.state_dict(), f'{root_folder}saved_model/last_cae.pt')
-
-# %%
-# print the device model is on
-print(next(model.parameters()).device)
-
-# %%
-
-
-
