@@ -222,7 +222,7 @@ for epoch in range(epochs):
     traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
 
     for i in range(epoch_iter):
-        prepare_masked_batch(x, traj_ids[i])
+        prepare_masked_batch(y, traj_ids[i])
 
         optimizer.zero_grad()
         pred, gate = model(obs, tar_x, obs_mask)
@@ -281,7 +281,7 @@ for epoch in range(epochs):
             val_loss, val_loss0, val_loss1, val_loss2, val_loss3 = 0, 0, 0, 0, 0
 
             for j in range(v_epoch_iter):
-                prepare_masked_val_batch(vx, v_traj_ids[j])
+                prepare_masked_val_batch(vy, v_traj_ids[j])
 
                 p, g = model.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g.squeeze(1), dim=-1)
