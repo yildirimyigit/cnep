@@ -19,7 +19,7 @@ def get_free_gpu():
     gpu_util.sort(key=lambda x: x[1])
     return gpu_util[0][0]
 
-if torch.cuda.is_available() and False:
+if torch.cuda.is_available():
     available_gpu = get_free_gpu()
     if available_gpu == 0:
         device = torch.device("cuda:0")
