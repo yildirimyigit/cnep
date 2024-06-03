@@ -49,11 +49,21 @@ vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
 vy = torch.zeros(num_val, t_steps, dy)
 
 for i in range(num_classes):
-    start_ind = i*num_indiv
-    coeff = (i+1)/2*torch.pi
-    y[start_ind:start_ind+num_indiv] = (torch.unsqueeze(generate_sin(x*coeff), 2) +1)/2.0
+    start_ind = i * num_indiv
+    coeff = (i + 1) / 2 * torch.pi
+    phase_shifts = torch.rand(num_indiv) * 5e-2 * torch.pi
 
-    noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*1e-4**0.5, min=0) - noise_clip, -1)
+    # Expand dimensions for proper broadcasting (without the extra unsqueeze)
+    expanded_x = x.expand(num_indiv, -1)  # Shape: (32, 200)
+    expanded_phase_shifts = phase_shifts.unsqueeze(1).expand(-1, x.shape[1])  # Shape: (32, 200)
+
+    # Now the element-wise operations work correctly
+    y[start_ind: start_ind + num_indiv, :, :] = (
+        torch.unsqueeze(generate_sin(expanded_x * coeff + expanded_phase_shifts), 2) + 1
+    ) / 2.0
+
+
+    noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*0.01, min=0) - noise_clip, -1)
 
     start_val_ind = i*num_val_indiv
     start_ind = i*num_indiv
@@ -136,12 +146,12 @@ def prepare_masked_batch(t: list, traj_ids: list):
         n_ids = permuted_ids[:n]
         m_ids = permuted_ids[n:n+m]
         
-        obs[i, :n, :dx] = traj[n_ids]
-        obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
+        obs[i, :n, :dx] = (n_ids/t_steps).unsqueeze(1)
+        obs[i, :n, dx:] = traj[n_ids]
         obs_mask[i, :n] = True
         
-        tar_x[i, :m] = traj[m_ids]
-        tar_y[i, :m] = (m_ids/t_steps).unsqueeze(1)
+        tar_x[i, :m] = (m_ids/t_steps).unsqueeze(1)
+        tar_y[i, :m] = traj[m_ids]
         tar_mask[i, :m] = True
 
 val_obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
@@ -164,12 +174,12 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         n_ids = permuted_ids[:n]
         m_ids = torch.arange(t_steps)
         
-        val_obs[i, :n, :dx] = traj[n_ids]
-        val_obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
+        val_obs[i, :n, :dx] = (n_ids/t_steps).unsqueeze(1)
+        val_obs[i, :n, dx:] = traj[n_ids]
         val_obs_mask[i, :n] = True
         
-        val_tar_x[i] = traj[m_ids]
-        val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
+        val_tar_x[i] = (m_ids/t_steps).unsqueeze(1)
+        val_tar_y[i] = traj[m_ids]
 
 # %%
 model_ = CNEP(1, 1, n_max, m_max, [32,32], num_decoders=4, decoder_hidden_dims=[16, 16], batch_size=batch_size, scale_coefs=True, device=device)
@@ -197,8 +207,8 @@ def get_parameter_count(model):
         total_num += param.shape.numel()
     return total_num
 
-print("cnep2:", get_parameter_count(model_))
-print("cnep4:", get_parameter_count(cnmp_))
+print("cnep:", get_parameter_count(model_))
+print("cnmp:", get_parameter_count(cnmp_))
 
 
 if torch.__version__ >= "2.0":
