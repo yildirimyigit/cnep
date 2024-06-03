@@ -182,23 +182,23 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-model_ = CNEP(1, 1, n_max, m_max, [32,32], num_decoders=4, decoder_hidden_dims=[16, 16], batch_size=batch_size, scale_coefs=True, device=device)
+model_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
 
-model0_ = CNEP(1, 1, n_max, m_max, [32,32], num_decoders=4, decoder_hidden_dims=[16, 16], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
 model0_.batch_entropy_coef = 0.0
 optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
 
-model1_ = CNEP(1, 1, n_max, m_max, [32,32], num_decoders=4, decoder_hidden_dims=[16, 16], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
 model1_.ind_entropy_coef = 0.0
 optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
 
-model2_ = CNEP(1, 1, n_max, n_max, [32,32], num_decoders=4, decoder_hidden_dims=[16, 16], batch_size=batch_size, scale_coefs=True, device=device)
+model2_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
 model2_.batch_entropy_coef = 0.0
 model2_.ind_entropy_coef = 0.0
 
-cnmp_ = CNMP(1, 1, n_max, m_max, [32,32], decoder_hidden_dims=[64,64], batch_size=batch_size, device=device)
+cnmp_ = CNMP(1, 1, n_max, m_max, [64,64], decoder_hidden_dims=[128,128], batch_size=batch_size, device=device)
 optimizer3 = torch.optim.Adam(lr=1e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
@@ -240,7 +240,7 @@ epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss, avg_loss0, avg_loss1, avg_loss2, avg_loss3 = 0, 0, 0, 0, 0
 
-val_per_epoch = 1000
+val_per_epoch = 2000
 min_vl, min_vl0, min_vl1, min_vl2, min_vl3 = 1000000, 1000000, 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
