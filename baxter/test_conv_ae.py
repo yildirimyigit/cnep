@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 
 from conv_autoenc import ConvAE
 
+torch._dynamo.config.cache_size_limit = 1024  # Increased cache size limit
 torch.set_float32_matmul_precision('high')
 
 def get_free_gpu():
@@ -56,7 +57,7 @@ for filename in os.listdir(img_folder):
 
 imgs = torch.stack(data, dim=0)
 
-num_train = 304
+num_train = 320
 num_val = 32
 epoch_iter = num_train//batch_size
 v_epoch_iter = num_val//batch_size
