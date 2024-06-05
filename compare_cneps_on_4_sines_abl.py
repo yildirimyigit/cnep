@@ -55,6 +55,7 @@ for i in range(num_classes):
 
     # Expand dimensions for proper broadcasting (without the extra unsqueeze)
     expanded_x = x.expand(num_indiv, -1)  # Shape: (32, 200)
+    expanded_x += 0.2
     expanded_phase_shifts = phase_shifts.unsqueeze(1).expand(-1, x.shape[1])  # Shape: (32, 200)
 
     # Now the element-wise operations work correctly
