@@ -78,19 +78,19 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
-sns.set_palette('tab10')
+# colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
+# sns.set_palette('tab10')
 
-plt.figure(figsize=(6, 4))
-for i in range(num_val):
-    plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), color=colors[i//num_val_indiv], alpha=0.5)
-    # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
+# plt.figure(figsize=(6, 4))
+# for i in range(num_val):
+#     plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), color=colors[i//num_val_indiv], alpha=0.5)
+#     # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
 
-# plt.legend(loc='lower left', fontsize=14)
-plt.grid(True)
-plt.xlabel('Time (s)', fontsize=14)
-plt.ylabel('Amplitude', fontsize=14)
-plt.title(f'Sine Waves', fontsize=16)
+# # plt.legend(loc='lower left', fontsize=14)
+# plt.grid(True)
+# plt.xlabel('Time (s)', fontsize=14)
+# plt.ylabel('Amplitude', fontsize=14)
+# plt.title(f'Sine Waves', fontsize=16)
 
 # %%
 # import numpy as np
@@ -183,24 +183,24 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-model_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
+model_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer = torch.optim.Adam(lr=3e-4, params=model_.parameters())
 
-model0_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model0_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 model0_.batch_entropy_coef = 0.0
-optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
+optimizer0 = torch.optim.Adam(lr=3e-4, params=model0_.parameters())
 
-model1_ = CNEP(1, 1, n_max, m_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model1_ = CNEP(1, 1, n_max, m_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 model1_.ind_entropy_coef = 0.0
-optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
+optimizer1 = torch.optim.Adam(lr=3e-4, params=model1_.parameters())
 
-model2_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
+model2_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 model2_.batch_entropy_coef = 0.0
 model2_.ind_entropy_coef = 0.0
 
-cnmp_ = CNMP(1, 1, n_max, m_max, [104,104], decoder_hidden_dims=[104,104], batch_size=batch_size, device=device)
-optimizer3 = torch.optim.Adam(lr=1e-4, params=cnmp_.parameters())
+cnmp_ = CNMP(1, 1, n_max, m_max, [204,204], decoder_hidden_dims=[204,204], batch_size=batch_size, device=device)
+optimizer3 = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
     total_num = 0
@@ -208,8 +208,8 @@ def get_parameter_count(model):
         total_num += param.shape.numel()
     return total_num
 
-print("cnep:", get_parameter_count(model_))
-print("cnmp:", get_parameter_count(cnmp_))
+# print("cnep:", get_parameter_count(model_))
+# print("cnmp:", get_parameter_count(cnmp_))
 
 
 if torch.__version__ >= "2.0":
@@ -236,7 +236,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 1_000_000
+epochs = 5_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss, avg_loss0, avg_loss1, avg_loss2, avg_loss3 = 0, 0, 0, 0, 0
