@@ -18,4 +18,5 @@ catkin_ws/
 build/
 mp_comparison/Stable-Motion-Primitives-via-Imitation-and-Contrastive-Learning/
 results/
-baxter/data/ral/
+baxter/data/
+baxter/output/
