@@ -61,22 +61,22 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
 
 # %%
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
-colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
-sns.set_palette('tab10')
+# colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
+# sns.set_palette('tab10')
 
-plt.figure(figsize=(6, 4))
-for i in range(num_demos):
-    plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), color=colors[i%num_classes], alpha=0.5)
-    # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
+# plt.figure(figsize=(6, 4))
+# for i in range(num_demos):
+#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), color=colors[i%num_classes], alpha=0.5)
+#     # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
 
-# plt.legend(loc='lower left', fontsize=14)
-plt.grid(True)
-plt.xlabel('Time (s)', fontsize=14)
-plt.ylabel('Amplitude', fontsize=14)
-plt.title(f'Sine Waves', fontsize=16)
+# # plt.legend(loc='lower left', fontsize=14)
+# plt.grid(True)
+# plt.xlabel('Time (s)', fontsize=14)
+# plt.ylabel('Amplitude', fontsize=14)
+# plt.title(f'Sine Waves', fontsize=16)
 
 # %%
 # import numpy as np
