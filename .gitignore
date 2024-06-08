@@ -6,6 +6,7 @@ data/forecast/
 out/
 *.out
 *.sh
+*.svg
 .ipynb_checkpoints/
 dum_test.ipynb
 saved_models/

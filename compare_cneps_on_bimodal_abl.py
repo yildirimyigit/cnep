@@ -61,24 +61,45 @@ print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 x, y, vx, vy = x.to(device), y.to(device), vx.to(device), vy.to(device)
 
 # %%
-# import matplotlib.pyplot as plt
-# import seaborn as sns
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
-# sns.set_palette('tab10')
+colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
+sns.set_palette('tab10')
 
-# plt.figure(figsize=(6, 4))
+plt.figure(figsize=(6, 4))
+for i in range(num_demos):
+    plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), color=colors[i%num_classes], alpha=0.5)
+    # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
+
+# plt.legend(loc='lower left', fontsize=14)
+plt.grid(True)
+plt.xlabel('Time (s)', fontsize=14)
+plt.ylabel('Amplitude', fontsize=14)
+plt.title(f'Sine Waves', fontsize=16)
+
+# %%
+# import numpy as np
+# import os
+
+# save_path = 'data/synthetic/bimodal'
+
+# if not os.path.exists(save_path):
+#     os.makedirs(save_path)
+# try:
+#     os.makedirs(f'{save_path}_0')
+#     os.makedirs(f'{save_path}_1')
+# except:
+#     pass
+
 # for i in range(num_demos):
-#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), color=colors[i%num_classes], alpha=0.5)
-#     # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
+#     traj = np.zeros((1, t_steps, 2))
+#     traj[0, :, 0] = x[i, :, 0].cpu().numpy()
+#     traj[0, :, 1] = y[i, :, 0].cpu().numpy()
+        
+#     np.save(f'{save_path}_{i%num_classes}/{i//num_classes}.npy', traj)
 
-# # plt.legend(loc='lower left', fontsize=14)
-# plt.grid(True)
-# plt.xlabel('Time (s)', fontsize=14)
-# plt.ylabel('Amplitude', fontsize=14)
-# plt.title(f'Sine Waves', fontsize=16)
-
-
+# %%
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
 tar_x = torch.zeros((batch_size, m_max, dx), dtype=torch.float32, device=device)
 tar_y = torch.zeros((batch_size, m_max, dy), dtype=torch.float32, device=device)
@@ -139,33 +160,33 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
 
 # %%
 model_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer = torch.optim.Adam(lr=1e-4, params=model_.parameters())
+optimizer = torch.optim.Adam(lr=3e-4, params=model_.parameters())
 
 model0_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer0 = torch.optim.Adam(lr=1e-4, params=model0_.parameters())
+optimizer0 = torch.optim.Adam(lr=3e-4, params=model0_.parameters())
 model0_.batch_entropy_coef = 0.0
 
 model1_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer1 = torch.optim.Adam(lr=1e-4, params=model1_.parameters())
+optimizer1 = torch.optim.Adam(lr=3e-4, params=model1_.parameters())
 model1_.ind_entropy_coef = 0.0
 
 model2_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
+optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 model2_.batch_entropy_coef = 0.0
 model2_.ind_entropy_coef = 0.0
 
 cnmp_ = CNMP(1, 1, n_max, m_max, [158,158], decoder_hidden_dims=[158,158], batch_size=batch_size, device=device)
-optimizer3 = torch.optim.Adam(lr=1e-4, params=cnmp_.parameters())
+optimizer3 = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
 
 
-# def get_parameter_count(model):
-#     total_num = 0
-#     for param in model.parameters():
-#         total_num += param.shape.numel()
-#     return total_num
+def get_parameter_count(model):
+    total_num = 0
+    for param in model.parameters():
+        total_num += param.shape.numel()
+    return total_num
 
-# print("cnep:", get_parameter_count(model_))
-# print("cnmp:", get_parameter_count(cnmp_))
+print("cnep:", get_parameter_count(model_))
+print("cnmp:", get_parameter_count(cnmp_))
 
 if torch.__version__ >= "2.0":
     model, model0, model1, model2, cnmp = torch.compile(model_), torch.compile(model0_), torch.compile(model1_), torch.compile(model2_), torch.compile(cnmp_)
@@ -191,12 +212,12 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 3_000_000
+epochs = 5_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss, avg_loss0, avg_loss1, avg_loss2, avg_loss3 = 0, 0, 0, 0, 0
 
-val_per_epoch = 1000
+val_per_epoch = 5000
 min_vl, min_vl0, min_vl1, min_vl2, min_vl3 = 1000000, 1000000, 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
@@ -313,27 +334,27 @@ for epoch in range(epochs):
 
             if val_loss < min_vl:
                 min_vl = val_loss
-                print(f'New best Orig: {min_vl}')
+                print(f'New best CNEP: {min_vl}')
                 torch.save(model_.state_dict(), f'{root_folder}saved_models/org.pt')
 
             if val_loss0 < min_vl0:
                 min_vl0 = val_loss0
-                print(f'New best Abl 0: {min_vl0}')
+                print(f'New best CNEP-A0: {min_vl0}')
                 torch.save(model0_.state_dict(), f'{root_folder}saved_models/abl0.pt')
 
             if val_loss1 < min_vl1:
                 min_vl1 = val_loss1
-                print(f'New best Abl 1: {min_vl1}')
+                print(f'New best CNEP-A1: {min_vl1}')
                 torch.save(model1_.state_dict(), f'{root_folder}saved_models/abl1.pt')
 
             if val_loss2 < min_vl2:
                 min_vl2 = val_loss2
-                print(f'New best Abl 2: {min_vl2}')
+                print(f'New best CNEP-A2: {min_vl2}')
                 torch.save(model2_.state_dict(), f'{root_folder}saved_models/abl2.pt')
 
             if val_loss3 < min_vl3:
                 min_vl3 = val_loss3
-                print(f'New best Abl 3: {min_vl3}')
+                print(f'New best CNMP: {min_vl3}')
                 torch.save(cnmp_.state_dict(), f'{root_folder}saved_models/cnmp.pt')
             
             print(f'Bests: {min_vl}, {min_vl0}, {min_vl1}, {min_vl2}, {min_vl3}')
@@ -345,17 +366,17 @@ for epoch in range(epochs):
     avg_loss3 += epoch_loss3
 
     if epoch % val_per_epoch == 0:
-        print("Epoch: {}, Orig: {}, Abl0: {}, Abl1: {}, Abl2: {}, CNMP: {}".format(epoch, avg_loss/val_per_epoch, avg_loss0/val_per_epoch, avg_loss1/val_per_epoch, avg_loss2/val_per_epoch, avg_loss3/val_per_epoch))
+        print("Epoch: {}, CNEP: {}, CNEP-A0: {}, CNEP-A1: {}, CNEP-A2: {}, CNMP: {}".format(epoch, avg_loss/val_per_epoch, avg_loss0/val_per_epoch, avg_loss1/val_per_epoch, avg_loss2/val_per_epoch, avg_loss3/val_per_epoch))
         avg_loss, avg_loss0, avg_loss1, avg_loss2, avg_loss3 = 0, 0, 0, 0, 0
 
 torch.save(torch.Tensor(tl), cnep_tl_path)
 torch.save(torch.Tensor(ve), cnep_ve_path)
-torch.save(torch.Tensor(tl0), cnep_tl_path+'_abl0')
-torch.save(torch.Tensor(ve0), cnep_ve_path+'_abl0')
-torch.save(torch.Tensor(tl1), cnep_tl_path+'_abl1')
-torch.save(torch.Tensor(ve1), cnep_ve_path+'_abl1')
-torch.save(torch.Tensor(tl2), cnep_tl_path+'_abl2')
-torch.save(torch.Tensor(ve2), cnep_ve_path+'_abl2')
+torch.save(torch.Tensor(tl0), cnep_tl_path+'_a0')
+torch.save(torch.Tensor(ve0), cnep_ve_path+'_a0')
+torch.save(torch.Tensor(tl1), cnep_tl_path+'_a1')
+torch.save(torch.Tensor(ve1), cnep_ve_path+'_a1')
+torch.save(torch.Tensor(tl2), cnep_tl_path+'_a2')
+torch.save(torch.Tensor(ve2), cnep_ve_path+'_a2')
 torch.save(torch.Tensor(tl3), cnep_tl_path+'_cnmp')
 torch.save(torch.Tensor(ve3), cnep_ve_path+'_cnmp')
 
