@@ -189,11 +189,11 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(1, dy, n_max, m_max, [128,128], num_decoders=16, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+cnep_ = CNEP(1, dy, n_max, m_max, [144,144,144], num_decoders=16, decoder_hidden_dims=[144, 144], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer_cnep = torch.optim.Adam(lr=1e-4, params=cnep_.parameters())
 
 # CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=6, n_max_tar=6, num_layers=3, batch_size=batch_size).to(device)
-cnmp_ = CNMP(1, dy, n_max, m_max, [384,384], decoder_hidden_dims=[384,384], batch_size=batch_size, device=device)
+cnmp_ = CNMP(1, dy, n_max, m_max, [314,314,314], decoder_hidden_dims=[314,314,314], batch_size=batch_size, device=device)
 optimizer_cnmp = torch.optim.Adam(lr=1e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
@@ -290,8 +290,8 @@ for epoch in range(epochs):
                 vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_err_cnep += mse_loss(vp_means, val_tar_y).item()
 
-            val_err_cnmp = val_err_cnmp/v_epoch_iter
-            val_err_cnep = val_err_cnep/v_epoch_iter
+            val_err_cnmp = val_err_cnmp/v_num_demos
+            val_err_cnep = val_err_cnep/v_num_demos
 
             if val_err_cnmp < min_vl_cnmp:
                 min_vl_cnmp = val_err_cnmp
