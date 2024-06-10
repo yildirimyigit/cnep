@@ -1,5 +1,4 @@
 # %%
-from models.cnp import CNP
 from models.cnep import CNEP
 
 from data.data_generators import *
@@ -42,11 +41,6 @@ num_val = 32
 num_val_indiv = num_val//num_classes
 
 # %%
-import seaborn as sns
-
-colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
-sns.set_palette('tab10')
-
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
 y = torch.zeros(num_demos, t_steps, dy)
 
@@ -54,35 +48,30 @@ vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
 vy = torch.zeros(num_val, t_steps, dy)
 
 for i in range(num_classes):
+    start_ind = i * num_indiv
+    coeff = (i + 1) / 2 * torch.pi
+    phase_shifts = torch.rand(num_indiv) * 5e-2 * torch.pi
+
+    # Expand dimensions for proper broadcasting (without the extra unsqueeze)
+    expanded_x = x.expand(num_indiv, -1)  # Shape: (32, 200)
+    expanded_x += 0.2
+    expanded_phase_shifts = phase_shifts.unsqueeze(1).expand(-1, x.shape[1])  # Shape: (32, 200)
+
+    # Now the element-wise operations work correctly
+    y[start_ind: start_ind + num_indiv, :, :] = (
+        torch.unsqueeze(generate_sin(expanded_x * coeff + expanded_phase_shifts), 2) + 1
+    ) / 2.0
+
+
+    noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*0.01, min=0) - noise_clip, -1)
+
+    start_val_ind = i*num_val_indiv
     start_ind = i*num_indiv
-    coeff = (i+1)/2*torch.pi
-    y[start_ind:start_ind+num_indiv] = (torch.unsqueeze(generate_sin(x*coeff), 2) +1)/2.0
-
-    noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*1e-4**0.5, min=0) - noise_clip, -1)
-
-    start_ind = i*num_val_indiv
-    vy[start_ind:start_ind+num_val_indiv] = y[start_ind:start_ind+num_val_indiv].clone() + noise
+    vy[start_val_ind:start_val_ind+num_val_indiv] = y[start_ind:start_ind+num_val_indiv].clone() + noise
 
 x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
-
-# from matplotlib import pyplot as plt
-
-# plt.figure(figsize=(8, 6))
-# for i in range(num_demos):
-#     plt.plot(x[i, :, 0].cpu(), y[i, :, 0].cpu(), label=f'Sine Wave {i+1}', linewidth=2.0, color=colors[i])
-#     # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
-
-# plt.legend(loc='lower left', fontsize=14)
-# plt.grid(True)
-# plt.xlabel('Time (s)', fontsize=14)
-# plt.ylabel('Amplitude', fontsize=14)
-# plt.title(f'Sine Wave of 3 Different Frequencies', fontsize=16)
-# plt.savefig(f'/home/yigit/papers/yildirim_23_ral/fig/3.png', bbox_inches='tight')
-
-x, y = x.to(device), y.to(device)
-# x1, y1 = x.to(device_cnp), y.to(device_cnp)
 
 # %%
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
@@ -107,13 +96,13 @@ def prepare_masked_batch(t: list, traj_ids: list):
         permuted_ids = torch.randperm(t_steps)
         n_ids = permuted_ids[:n]
         m_ids = permuted_ids[n:n+m]
-
-        obs[i, :n, :dx] = traj[n_ids]
-        obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
+        
+        obs[i, :n, :dx] = (n_ids/t_steps).unsqueeze(1)
+        obs[i, :n, dx:] = traj[n_ids]
         obs_mask[i, :n] = True
-
-        tar_x[i, :m] = traj[m_ids]
-        tar_y[i, :m] = (m_ids/t_steps).unsqueeze(1)
+        
+        tar_x[i, :m] = (m_ids/t_steps).unsqueeze(1)
+        tar_y[i, :m] = traj[m_ids]
         tar_mask[i, :m] = True
 
 val_obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
@@ -135,23 +124,23 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         permuted_ids = torch.randperm(t_steps)
         n_ids = permuted_ids[:n]
         m_ids = torch.arange(t_steps)
-
-        val_obs[i, :n, :dx] = traj[n_ids]
-        val_obs[i, :n, dx:] = (n_ids/t_steps).unsqueeze(1)
+        
+        val_obs[i, :n, :dx] = (n_ids/t_steps).unsqueeze(1)
+        val_obs[i, :n, dx:] = traj[n_ids]
         val_obs_mask[i, :n] = True
-
-        val_tar_x[i] = traj[m_ids]
-        val_tar_y[i] = (m_ids/t_steps).unsqueeze(1)
+        
+        val_tar_x[i] = (m_ids/t_steps).unsqueeze(1)
+        val_tar_y[i] = traj[m_ids]
 
 # %%
-model2_ = CNEP(1, 1, n_max, n_max, [64, 64], num_decoders=2, decoder_hidden_dims=[130, 130], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer2 = torch.optim.Adam(lr=1e-4, params=model2_.parameters())
+model2_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[130, 130], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 
-model4_ = CNEP(1, 1, n_max, n_max, [64, 64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer4 = torch.optim.Adam(lr=1e-4, params=model4_.parameters())
+model4_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer4 = torch.optim.Adam(lr=3e-4, params=model4_.parameters())
 
-model8_ = CNEP(1, 1, n_max, n_max, [64, 64], num_decoders=8, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer8 = torch.optim.Adam(lr=1e-4, params=model8_.parameters())
+model8_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=8, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer8 = torch.optim.Adam(lr=3e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
     total_num = 0
@@ -171,8 +160,6 @@ else:
 # %%
 import time
 import os
-
-torch._dynamo.config.verbose=True
 
 timestamp = int(time.time())
 root_folder = f'outputs/ablation/sines_4/2_4_8/{str(timestamp)}/'
@@ -194,7 +181,7 @@ epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
 
-val_per_epoch = 1000
+val_per_epoch = 5000
 min_vl2, min_vl4, min_vl8 = 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
@@ -211,7 +198,7 @@ for epoch in range(epochs):
     traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
 
     for i in range(epoch_iter):
-        prepare_masked_batch(x, traj_ids[i])
+        prepare_masked_batch(y, traj_ids[i])
 
         optimizer2.zero_grad()
         pred2, gate2 = model2(obs, tar_x, obs_mask)
@@ -251,7 +238,7 @@ for epoch in range(epochs):
             val_loss2, val_loss4, val_loss8 = 0, 0, 0
 
             for j in range(v_epoch_iter):
-                prepare_masked_val_batch(vx, v_traj_ids[j])
+                prepare_masked_val_batch(vy, v_traj_ids[j])
 
                 p_wta, g_wta = model2.val(val_obs, val_tar_x, val_obs_mask)
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
