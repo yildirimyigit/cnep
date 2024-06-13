@@ -1,4 +1,3 @@
-# %%
 from models.cnep import CNEP
 
 from data.data_generators import *
@@ -26,7 +25,7 @@ else:
 
 print("Device :", device)
 
-# %%
+
 batch_size = 32
 n_max, m_max = 10, 10  # max number of points in context set and target set
 
@@ -40,7 +39,7 @@ dx, dy = 1, 1
 num_val = 32
 num_val_indiv = num_val//num_classes
 
-# %%
+
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
 y = torch.zeros(num_demos, t_steps, dy)
 
@@ -73,7 +72,7 @@ x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 
-# %%
+
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
 tar_x = torch.zeros((batch_size, m_max, dx), dtype=torch.float32, device=device)
 tar_y = torch.zeros((batch_size, m_max, dy), dtype=torch.float32, device=device)
@@ -132,14 +131,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_x[i] = (m_ids/t_steps).unsqueeze(1)
         val_tar_y[i] = traj[m_ids]
 
-# %%
-model2_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[130, 130], batch_size=batch_size, scale_coefs=True, device=device)
+model2_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 
-model4_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model4_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer4 = torch.optim.Adam(lr=3e-4, params=model4_.parameters())
 
-model8_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=8, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+model8_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=8, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer8 = torch.optim.Adam(lr=3e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
@@ -157,7 +155,6 @@ if torch.__version__ >= "2.0":
 else:
     model2, model4, model8 = model2_, model4_, model8_
 
-# %%
 import time
 import os
 
@@ -176,7 +173,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 2_000_000
+epochs = 1_500_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
@@ -185,12 +182,6 @@ val_per_epoch = 5000
 min_vl2, min_vl4, min_vl8 = 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
-
-tl2, tl4, tl8 = [], [], []
-ve2, ve4, ve8 = [], [], []
-
-cnep_tl_path = f'{root_folder}cnep_training_loss.pt'
-cnep_ve_path = f'{root_folder}cnep_validation_error.pt'
 
 for epoch in range(epochs):
     epoch_loss2, epoch_loss4, epoch_loss8 = 0, 0, 0
@@ -228,10 +219,6 @@ for epoch in range(epochs):
     epoch_loss4 = epoch_loss4/epoch_iter
     epoch_loss8 = epoch_loss8/epoch_iter
 
-    tl2.append(epoch_loss2)
-    tl4.append(epoch_loss4)
-    tl8.append(epoch_loss8)
-
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
             v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
@@ -254,10 +241,6 @@ for epoch in range(epochs):
                 dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss8 += mse_loss(vp_means, val_tar_y).item()
-
-            ve2.append(val_loss2)
-            ve4.append(val_loss4)
-            ve8.append(val_loss8)
 
             if val_loss2 < min_vl2:
                 min_vl2 = val_loss2
@@ -283,15 +266,4 @@ for epoch in range(epochs):
     if epoch % val_per_epoch == 0:
         print("Epoch: {}, CNEP Losses: {}, {}, {}".format(epoch, avg_loss2/val_per_epoch, avg_loss4/val_per_epoch, avg_loss8/val_per_epoch))
         avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
-
-torch.save(torch.Tensor(tl2), cnep_tl_path+'_2')
-torch.save(torch.Tensor(ve2), cnep_ve_path+'_2')
-torch.save(torch.Tensor(tl4), cnep_tl_path+'_4')
-torch.save(torch.Tensor(ve4), cnep_ve_path+'_4')
-torch.save(torch.Tensor(tl8), cnep_tl_path+'_8')
-torch.save(torch.Tensor(ve8), cnep_ve_path+'_8')
-
-# %%
-
-
 
