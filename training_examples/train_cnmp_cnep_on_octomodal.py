@@ -38,73 +38,51 @@ else:
 print("Device :", device)
 
 # %%
+def generate_sin(x):
+    return torch.sin(x)
+
+
 num_demos, v_num_demos = 128, 32
-x = torch.linspace(0, 1, 200).repeat(num_demos, 1).unsqueeze(-1)
-vx = torch.linspace(0, 1, 200).repeat(v_num_demos, 1).unsqueeze(-1)
-y = torch.zeros((num_demos, x.shape[1], 2))
-vy = torch.zeros((v_num_demos, vx.shape[1], 2))
+num_classes = 8  # Number of modes
+num_indiv = num_demos // num_classes  # Number of trajectories per mode
+num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
+t_steps = 200
+dy = 1
 
-# radius_range = (1.2, 1.8) 
+# x = torch.linspace(0, 1, t_steps).repeat(num_demos, 1).unsqueeze(-1)
+# vx = torch.linspace(0, 1, t_steps).repeat(v_num_demos, 1).unsqueeze(-1)
+vx = torch.linspace(0, 1, 200).repeat(num_val_indiv, 1)
+vy = torch.zeros(v_num_demos, t_steps, dy)
+x = torch.linspace(0, 1, t_steps).repeat(num_indiv, 1)
+y = torch.zeros(num_demos, t_steps, dy)
 
-# for i in range(num_demos):
-#     radius = radius_range[0] + (radius_range[1] - radius_range[0]) * torch.rand(1) 
-#     frequency = 1 + torch.randint(-1, 2, (1,)).item()
-#     phase = torch.rand(1) * 2 * math.pi
-#     mode_index = torch.randint(0, 8, (1,)).item()
+# Increased range of coefficients for 8 modes
+coefficients = torch.linspace(1, 4, num_classes) * torch.pi 
 
-#     angle_offset = (2 * math.pi / 8) * mode_index
-#     y[i, :, 0] = (radius * torch.cos(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
-#     y[i, :, 1] = (radius * torch.sin(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
+for i in range(num_classes):
+    start_ind = i * num_indiv
+    coeff = coefficients[i]  # Use coefficient from the list
+    phase_shifts = torch.rand(num_indiv) * 5e-2 * torch.pi
 
-#     if i < v_num_demos:
-#         radius = radius_range[0] + (radius_range[1] - radius_range[0]) * torch.rand(1) 
-#         frequency = 1 + torch.randint(-1, 2, (1,)).item()
-#         phase = torch.rand(1) * 2 * math.pi
-#         mode_index = torch.randint(0, 8, (1,)).item()
+    # Expand dimensions for proper broadcasting
+    expanded_x = x.expand(num_indiv, -1)  # Shape: (16, 200)
+    expanded_phase_shifts = phase_shifts.unsqueeze(1).expand(-1, x.shape[1])  # Shape: (16, 200)
 
-#         angle_offset = (2 * math.pi / 8) * mode_index
-#         vy[i, :, 0] = (radius * torch.cos(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
-#         vy[i, :, 1] = (radius * torch.sin(frequency * x[0] + phase + angle_offset) + torch.randn(x.shape[1:]) * 0.005).squeeze(-1)
+    # Generate sinusoids with varying frequencies and random phase shifts
+    y[start_ind: start_ind + num_indiv, :, :] = torch.unsqueeze(generate_sin(expanded_x * coeff + expanded_phase_shifts), 2)
+    noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*0.01, min=0), -1)
+    start_ind = i*num_val_indiv
+    vy[start_ind:start_ind+num_val_indiv] = y[start_ind:start_ind+num_val_indiv].clone() + noise
 
-def generate_trajectories(num_demos=100, num_points=200):
-    # Define x as a linspace tensor repeated for num_demos
-    x = torch.linspace(0, 1, num_points).repeat(num_demos, 1).unsqueeze(-1)
-
-    # Initialize y as a tensor to hold the trajectory data
-    y = torch.zeros(num_demos, num_points, 2)
-
-    # Define modes for the trajectories
-    modes = [
-        lambda x: torch.sin(2 * np.pi * x),
-        lambda x: torch.cos(2 * np.pi * x),
-        lambda x: 2 * torch.sin(4 * np.pi * x),
-        lambda x: 2 * torch.cos(4 * np.pi * x),
-        lambda x: torch.sin(2 * np.pi * x) + torch.cos(4 * np.pi * x),
-        lambda x: torch.cos(2 * np.pi * x) + torch.sin(4 * np.pi * x),
-        lambda x: 3 * torch.sin(2 * np.pi * x) - torch.cos(2 * np.pi * x),
-        lambda x: 3 * torch.cos(2 * np.pi * x) - torch.sin(2 * np.pi * x)
-    ]
-
-    # Assign each demo to a mode with some random variation
-    for i in range(num_demos):
-        mode = i % len(modes)
-        # Apply the mode function to x and add noise
-        y[i, :, 0] = modes[mode](x[i, :, 0]) + 0.1 * torch.randn(num_points)
-        y[i, :, 1] = modes[mode](x[i, :, 0]) + 0.1 * torch.randn(num_points)
-
-    return x, y
-
-# Generate trajectories
-x, y = generate_trajectories(num_demos=512)
-vx, vy = generate_trajectories(num_demos=128)
+x = x.repeat(num_classes, 1).unsqueeze(-1)
+vx = vx.repeat(num_classes, 1).unsqueeze(-1)
+# Ensure y values are within [-1, 1]
+y = y - y.mean(dim=1, keepdim=True) # Center the means of each trajectory around zero.
 
 print(x.shape, y.shape)
 print(vx.shape, vy.shape)
 
 # %%
-x_np = x.numpy()  
-y_np = y.numpy()
-
 # Create a figure with two subplots sharing the y-axis
 # fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
 
@@ -122,35 +100,30 @@ y_np = y.numpy()
 # plt.tight_layout()  # Adjust layout for better spacing
 # plt.show()
 
-# Create a 3D plot
-#fig = plt.figure(figsize=(10, 8))  # Adjust figure size as needed
-#ax = fig.add_subplot(111, projection='3d')
-
-# Plot the 3D trajectories
-#for i in range(y_np.shape[0]):  # Iterate over each trajectory
-#    ax.plot3D(x_np[0,:,0], y_np[i, :, 0], y_np[i, :, 1])
+for i in range(y.shape[0]):  # Iterate over each trajectory
+    plt.plot(x[i,:,0], y[i, :, 0])
 
 # Set labels and title
-#ax.set_xlabel('x')
-#ax.set_ylabel('y (vy[:, :, 0])')
-#ax.set_zlabel('z (vy[:, :, 1])')
-#ax.set_title('3D Trajectories')
+plt.xlabel('Time')
+plt.ylabel('Position')
+plt.title('Octomodal Demonstrations')
+plt.grid(alpha=0.7)
 
 # Show the plot
-#plt.show()
+plt.show()
 
 # %%
 # Hyperparameters
-batch_size = 64
+batch_size = 32
 n_max, m_max = 10, 10
 
 t_steps = 200
-num_demos = 512
+num_demos = 128
 num_classes = 8
 num_indiv = num_demos//num_classes  # number of demos per class
-dx, dy = 1, 2
+dx, dy = 1, 1
 
-num_val = 128
+num_val = 32
 num_val_indiv = num_val//num_classes
 
 colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
@@ -220,12 +193,14 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(1, dy, n_max, m_max, [128,128], num_decoders=8, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer_cnep = torch.optim.Adam(lr=1e-4, params=cnep_.parameters())
+model2_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[130, 130], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 
-# CNP(input_dim=1, hidden_dim=204, output_dim=1, n_max_obs=6, n_max_tar=6, num_layers=3, batch_size=batch_size).to(device)
-cnmp_ = CNMP(1, dy, n_max, m_max, [276,276], decoder_hidden_dims=[276,276], batch_size=batch_size, device=device)
-optimizer_cnmp = torch.optim.Adam(lr=1e-4, params=cnmp_.parameters())
+model4_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer4 = torch.optim.Adam(lr=3e-4, params=model4_.parameters())
+
+model8_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=8, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer8 = torch.optim.Adam(lr=3e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
     total_num = 0
@@ -233,19 +208,21 @@ def get_parameter_count(model):
         total_num += param.shape.numel()
     return total_num
 
-print("cnep:", get_parameter_count(cnep_), 'cnmp:', get_parameter_count(cnmp_))
+print("cnep2:", get_parameter_count(model2_))
+print("cnep4:", get_parameter_count(model4_))
+print("cnep8:", get_parameter_count(model8_))
 
 if torch.__version__ >= "2.0":
-    cnep, cnmp = torch.compile(cnep_), torch.compile(cnmp_)
+    model2, model4, model8 = torch.compile(model2_), torch.compile(model4_), torch.compile(model8_)
 else:
-    cnep, cnmp = cnep_, cnmp_
+    model2, model4, model8 = model2_, model4_, model8_
 
 # %%
 import time
 import os
 
 timestamp = int(time.time())
-root_folder = f'../outputs/sine/octomodal/cnmp_cnep/{str(timestamp)}/'
+root_folder = f'outputs/ablation/octomodal/2_4_8/{str(timestamp)}/'
 
 if not os.path.exists(root_folder):
     os.makedirs(root_folder)
@@ -259,93 +236,120 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 1_000_000
+epochs = 5_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
-avg_loss_cnmp, avg_loss_cnep = 0, 0
+avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
 
-val_per_epoch = 1000
-min_vl_cnmp, min_vl_cnep = 1000000, 1000000
+val_per_epoch = 5000
+min_vl2, min_vl4, min_vl8 = 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
 
-tl_cnmp, tl_cnep = [], []
-ve_cnmp, ve_cnep = [], []
+tl2, tl4, tl8 = [], [], []
+ve2, ve4, ve8 = [], [], []
 
-cnmp_tl_path, cnep_tl_path = f'{root_folder}cnmp_training_loss.pt', f'{root_folder}cnep_training_loss.pt'
-cnmp_ve_path, cnep_ve_path = f'{root_folder}cnmp_validation_error.pt', f'{root_folder}cnep_validation_error.pt'
+cnep_tl_path = f'{root_folder}cnep_training_loss.pt'
+cnep_ve_path = f'{root_folder}cnep_validation_error.pt'
 
 for epoch in range(epochs):
-    epoch_loss_cnmp, epoch_loss_cnep = 0, 0
+    epoch_loss2, epoch_loss4, epoch_loss8 = 0, 0, 0
 
     traj_ids = torch.randperm(x.shape[0])[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
 
     for i in range(epoch_iter):
         prepare_masked_batch(y, traj_ids[i])
 
-        optimizer_cnmp.zero_grad()
-        pred = cnmp(obs, tar_x, obs_mask)
-        loss = cnmp.loss(pred, tar_y, tar_mask)
-        loss.backward()
-        optimizer_cnmp.step()
+        optimizer2.zero_grad()
+        pred2, gate2 = model2(obs, tar_x, obs_mask)
+        loss2, nll2 = model2.loss(pred2, gate2, tar_y, tar_mask)
+        loss2.backward()
+        optimizer2.step()
 
-        epoch_loss_cnmp += loss.item()
 
-        optimizer_cnep.zero_grad()
-        pred, gate = cnep(obs, tar_x, obs_mask)
-        loss, nll = cnep.loss(pred, gate, tar_y, tar_mask)
-        loss.backward()
-        optimizer_cnep.step()
+        optimizer4.zero_grad()
+        pred4, gate4 = model4(obs, tar_x, obs_mask)
+        loss4, nll4 = model4.loss(pred4, gate4, tar_y, tar_mask)
+        loss4.backward()
+        optimizer4.step()
 
-        epoch_loss_cnep += nll.item()
 
-    epoch_loss_cnmp = epoch_loss_cnmp/epoch_iter
-    tl_cnmp.append(epoch_loss_cnmp)
-    epoch_loss_cnep = epoch_loss_cnep/epoch_iter
-    tl_cnep.append(epoch_loss_cnep)
+        optimizer8.zero_grad()
+        pred8, gate8 = model8(obs, tar_x, obs_mask)
+        loss8, nll8 = model8.loss(pred8, gate8, tar_y, tar_mask)
+        loss8.backward()
+        optimizer8.step()
+
+        epoch_loss2 += nll2.item()
+        epoch_loss4 += nll4.item()
+        epoch_loss8 += nll8.item()
+
+    epoch_loss2 = epoch_loss2/epoch_iter
+    epoch_loss4 = epoch_loss4/epoch_iter
+    epoch_loss8 = epoch_loss8/epoch_iter
+
+    tl2.append(epoch_loss2)
+    tl4.append(epoch_loss4)
+    tl8.append(epoch_loss8)
 
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
             v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
-            val_err_cnmp, val_err_cnep = 0, 0
+            val_loss2, val_loss4, val_loss8 = 0, 0, 0
 
             for j in range(v_epoch_iter):
                 prepare_masked_val_batch(vy, v_traj_ids[j])
 
-                p = cnmp.val(val_obs, val_tar_x, val_obs_mask)
-                vp_means = p[:, :, :dy]
-                val_err_cnmp += mse_loss(vp_means, val_tar_y).item()
+                p_wta, g_wta = model2.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
+                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                val_loss2 += mse_loss(vp_means, val_tar_y).item()
 
-                p, g = cnep.val(val_obs, val_tar_x, val_obs_mask)
-                dec_id = torch.argmax(g.squeeze(1), dim=-1)
-                vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
-                val_err_cnep += mse_loss(vp_means, val_tar_y).item()
+                p_wta, g_wta = model4.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
+                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                val_loss4 += mse_loss(vp_means, val_tar_y).item()
 
-            val_err_cnmp = val_err_cnmp/v_epoch_iter
-            val_err_cnep = val_err_cnep/v_epoch_iter
+                p_wta, g_wta = model8.val(val_obs, val_tar_x, val_obs_mask)
+                dec_id = torch.argmax(g_wta.squeeze(1), dim=-1)
+                vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
+                val_loss8 += mse_loss(vp_means, val_tar_y).item()
 
-            if val_err_cnmp < min_vl_cnmp:
-                min_vl_cnmp = val_err_cnmp
-                print(f'CNMP New best: {min_vl_cnmp}')
-                torch.save(cnmp_.state_dict(), f'{root_folder}saved_models/cnmp.pt')
+            ve2.append(val_loss2)
+            ve4.append(val_loss4)
+            ve8.append(val_loss8)
 
-            if val_err_cnep < min_vl_cnep:
-                min_vl_cnep = val_err_cnep
-                print(f'CNEP New best: {min_vl_cnep}')
-                torch.save(cnep_.state_dict(), f'{root_folder}saved_models/cnep.pt')
+            if val_loss2 < min_vl2:
+                min_vl2 = val_loss2
+                print(f'New best 2: {min_vl2}')
+                torch.save(model2_.state_dict(), f'{root_folder}saved_models/cnep2.pt')
 
-            ve_cnmp.append(val_err_cnmp)
-            ve_cnep.append(val_err_cnep)
+            if val_loss4 < min_vl4:
+                min_vl4 = val_loss4
+                print(f'New best 4: {min_vl4}')
+                torch.save(model4_.state_dict(), f'{root_folder}saved_models/cnep4.pt')
 
-    avg_loss_cnmp += epoch_loss_cnmp
-    avg_loss_cnep += epoch_loss_cnep
+            if val_loss8 < min_vl8:
+                min_vl8 = val_loss8
+                print(f'New best 8: {min_vl8}')
+                torch.save(model8_.state_dict(), f'{root_folder}saved_models/cnep8.pt')
+            
+            print(f'Bests: {min_vl2}, {min_vl4}, {min_vl8}')
+
+    avg_loss2 += epoch_loss2
+    avg_loss4 += epoch_loss4
+    avg_loss8 += epoch_loss8
 
     if epoch % val_per_epoch == 0:
-        print("Epoch: {}, Loss: {}, {}, Min Err: {}, {}".format(epoch, avg_loss_cnmp/val_per_epoch, avg_loss_cnep/val_per_epoch, min_vl_cnmp, min_vl_cnep))
-        avg_loss_cnmp, avg_loss_cnep = 0, 0
+        print("Epoch: {}, CNEP Losses: {}, {}, {}".format(epoch, avg_loss2/val_per_epoch, avg_loss4/val_per_epoch, avg_loss8/val_per_epoch))
+        avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
 
-torch.save(torch.Tensor(tl_cnmp), cnmp_tl_path)
-torch.save(torch.Tensor(ve_cnmp), cnmp_ve_path)
+torch.save(torch.Tensor(tl2), cnep_tl_path+'_2')
+torch.save(torch.Tensor(ve2), cnep_ve_path+'_2')
+torch.save(torch.Tensor(tl4), cnep_tl_path+'_4')
+torch.save(torch.Tensor(ve4), cnep_ve_path+'_4')
+torch.save(torch.Tensor(tl8), cnep_tl_path+'_8')
+torch.save(torch.Tensor(ve8), cnep_ve_path+'_8')
 
 # %%
 
