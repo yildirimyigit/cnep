@@ -13,7 +13,6 @@ if folder_path not in sys.path:
     sys.path.append(folder_path)
 
 from cnep import CNEP
-from cnmp import CNMP
 
 torch.set_float32_matmul_precision('high')
 
