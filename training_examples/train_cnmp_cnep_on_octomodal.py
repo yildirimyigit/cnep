@@ -192,13 +192,13 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-model2_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=2, decoder_hidden_dims=[130, 130], batch_size=batch_size, scale_coefs=True, device=device)
+model2_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 
-model4_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=4, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
+model4_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer4 = torch.optim.Adam(lr=3e-4, params=model4_.parameters())
 
-model8_ = CNEP(1, 1, n_max, n_max, [64,64], num_decoders=8, decoder_hidden_dims=[32, 32], batch_size=batch_size, scale_coefs=True, device=device)
+model8_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=8, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer8 = torch.optim.Adam(lr=3e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
@@ -235,12 +235,12 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 5_000_000
+epochs = 1_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
 
-val_per_epoch = 5000
+val_per_epoch = 1000
 min_vl2, min_vl4, min_vl8 = 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
