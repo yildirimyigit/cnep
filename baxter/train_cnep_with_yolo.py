@@ -8,7 +8,7 @@ import os
 import csv
 
 
-is_save = False
+is_save = True
 
 
 def crop_left(im): 
@@ -19,14 +19,25 @@ class FeatureExtractor:
     def __init__(self, model):
         self.model = model
         self.features = []
+        self.device = 'cuda:0'
+
+        # Define a downsampling layer
+        self.downsample = nn.Sequential(
+            nn.Conv2d(576, 256, kernel_size=1, stride=1),  # Reducing channels from 576 to 128
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((16, 16))  # Reducing spatial dimensions to 10x10
+        ).to(self.device)
 
     def hook(self, module, input, output):
         print(f"Hook called for layer: {module}")
-        self.features.append(output)
+        # Apply downsampling
+        output = output.to(self.device)
+        downsampled_output = self.downsample(output)
+        self.features.append(downsampled_output)
 
     def register_hooks(self, layer_names):
         self.hooks = []
-        for name, module in self.model.named_modules():
+        for name, module in self.model.model.named_modules():  # Adjusted for YOLOv8 specific submodule access
             if name in layer_names:
                 print(f"Registering hook for layer: {name}")
                 hook = module.register_forward_hook(self.hook)
@@ -41,33 +52,32 @@ class FeatureExtractor:
         img = Image.open(img_path).convert('RGB')  # Load image using PIL
         transform = transforms.Compose([
             transforms.Lambda(crop_left),  # Crop the left side
-            transforms.Pad(padding=(40, 110, 40, 110)), # Pad to 640x640
+            transforms.Pad(padding=(40, 110, 40, 110)),  # Pad to 640x640
             transforms.ToTensor()
         ])
-        img = transform(img).unsqueeze(0)  # Transform to tensor and add batch dimension
+        img = transform(img).unsqueeze(0).to('cuda:0')  # Transform to tensor and add batch dimension
         self.model(img)
         return self.features
+
 
 # %%
 num_demos = 24
 t_steps = 400
-dims = 576 * 20 * 20
+dims = 256 * 16 * 16
 feats = torch.zeros(num_demos, dims)
 trajs = torch.zeros(num_demos, t_steps, 8)
 
 if is_save:
-    model = YOLO('yolov8m.pt')
+    model = YOLO('yolov8m.pt').to('cuda:0')
     feature_extractor = FeatureExtractor(model)
 
-    layer_names = ['model.model.21']
+    layer_names = ['model.21']
     feature_extractor.register_hooks(layer_names)
 
     # Extract features for a given image
     for i in range(num_demos):
         img_path = f'data/{i}/img.jpeg'
         features = feature_extractor.extract_features(img_path)
-        # print(features[0].shape)
-        # break
         feats[i] = features[0].view(-1)
 
         data_folder = f'/home/yigit/projects/cnep/baxter/data/{i}/'
@@ -205,8 +215,8 @@ def prepare_masked_val_batch(traj_ids: list):
         val_obs[i, :n, dx+dg:] = traj[n_ids]
         val_obs_mask[i, :n] = True
         
-        val_tar_x[i, :dx] = (m_ids/t_steps).unsqueeze(1)
-        val_tar_x[i, dx:] = feat.repeat(t_steps, 1)
+        val_tar_x[i, :, :dx] = (m_ids/t_steps).unsqueeze(1)
+        val_tar_x[i, :, dx:] = feat.repeat(t_steps, 1)
         val_tar_y[i] = traj[m_ids]
 
 # %%
