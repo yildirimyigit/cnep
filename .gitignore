@@ -22,3 +22,4 @@ mp_comparison/Stable-Motion-Primitives-via-Imitation-and-Contrastive-Learning/
 results/
 baxter/data/
 baxter/output/
+tmp/
