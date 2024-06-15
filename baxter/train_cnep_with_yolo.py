@@ -1,6 +1,6 @@
-# %%
 from ultralytics import YOLO
 import torch
+import torch.nn as nn
 from torchvision import transforms
 from PIL import Image
 
@@ -8,11 +8,11 @@ import os
 import csv
 
 
+is_save = False
+
+
 def crop_left(im): 
     return transforms.functional.crop(im, top=0, left=0, height=420, width=560)
-
-
-is_save = False
 
 
 class FeatureExtractor:
@@ -21,12 +21,14 @@ class FeatureExtractor:
         self.features = []
 
     def hook(self, module, input, output):
+        print(f"Hook called for layer: {module}")
         self.features.append(output)
 
     def register_hooks(self, layer_names):
         self.hooks = []
         for name, module in self.model.named_modules():
             if name in layer_names:
+                print(f"Registering hook for layer: {name}")
                 hook = module.register_forward_hook(self.hook)
                 self.hooks.append(hook)
 
@@ -47,27 +49,25 @@ class FeatureExtractor:
         return self.features
 
 # %%
-if is_save:
-    # Initialize YOLO model
-    model = YOLO('yolov8m.pt')
+num_demos = 24
+t_steps = 400
+dims = 576 * 20 * 20
+feats = torch.zeros(num_demos, dims)
+trajs = torch.zeros(num_demos, t_steps, 8)
 
-    # Initialize the feature extractor
+if is_save:
+    model = YOLO('yolov8m.pt')
     feature_extractor = FeatureExtractor(model)
 
-    # Register hooks on the desired layers (use appropriate layer names)
-    layer_names = ['model.model.17']  # Example layer names, update accordingly
+    layer_names = ['model.model.21']
     feature_extractor.register_hooks(layer_names)
 
-    t_steps = 400
-
-    num_demos = 24
-
-    trajs = torch.zeros(num_demos, t_steps, 8)
-    feats = torch.zeros(num_demos, 576*40*40)
-
+    # Extract features for a given image
     for i in range(num_demos):
         img_path = f'data/{i}/img.jpeg'
         features = feature_extractor.extract_features(img_path)
+        # print(features[0].shape)
+        # break
         feats[i] = features[0].view(-1)
 
         data_folder = f'/home/yigit/projects/cnep/baxter/data/{i}/'
@@ -88,6 +88,8 @@ if is_save:
 
     torch.save(trajs, 'trajs.pt')
     torch.save(feats, 'feats.pt')
+
+    feature_extractor.remove_hooks()
 else:
     trajs = torch.load('trajs.pt')
     feats = torch.load('feats.pt')
@@ -138,7 +140,7 @@ num_indiv = num_demos // num_classes  # Number of trajectories per mode
 num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
 
 dx = 1
-dg = 576*40*40
+dg = dims
 dy = 8
 batch_size = 2
 n_max, m_max = 20, 20
@@ -208,10 +210,10 @@ def prepare_masked_val_batch(traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(dx+dg, dy, n_max, n_max, [1024,512,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+cnep_ = CNEP(dx+dg, dy, n_max, n_max, [512,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer_cnep = torch.optim.Adam(lr=3e-4, params=cnep_.parameters())
 
-cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [1024,512,128], decoder_hidden_dims=[256, 256], batch_size=batch_size, device=device)
+cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [512,128], decoder_hidden_dims=[256, 256], batch_size=batch_size, device=device)
 optimizer_cnmp = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
@@ -329,5 +331,8 @@ for epoch in range(epochs):
 
 torch.save(torch.Tensor(tl_cnmp), cnmp_tl_path)
 torch.save(torch.Tensor(ve_cnmp), cnmp_ve_path)
+
+# %%
+
 
 
