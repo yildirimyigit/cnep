@@ -1,3 +1,4 @@
+# %%
 from ultralytics import YOLO
 import torch
 import torch.nn as nn
@@ -9,23 +10,24 @@ import csv
 
 
 is_save = True
+comp_filter_size = 256
 
 
 def crop_left(im): 
-    return transforms.functional.crop(im, top=0, left=0, height=420, width=560)
+    return transforms.functional.crop(im, top=0, left=0, height=320, width=500)
 
 
 class FeatureExtractor:
-    def __init__(self, model):
+    def __init__(self, model, device='cuda:0'):
         self.model = model
         self.features = []
-        self.device = 'cuda:0'
+        self.device = device
 
         # Define a downsampling layer
         self.downsample = nn.Sequential(
-            nn.Conv2d(576, 256, kernel_size=1, stride=1),  # Reducing channels from 576 to 128
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d((16, 16))  # Reducing spatial dimensions to 10x10
+            nn.Conv2d(512, comp_filter_size, kernel_size=1, stride=1),  # Reducing channels from 576 to 256
+            # nn.ReLU(),
+            # nn.AdaptiveAvgPool2d((16, 16))  # Reducing spatial dimensions to 10x10
         ).to(self.device)
 
     def hook(self, module, input, output):
@@ -52,49 +54,52 @@ class FeatureExtractor:
         img = Image.open(img_path).convert('RGB')  # Load image using PIL
         transform = transforms.Compose([
             transforms.Lambda(crop_left),  # Crop the left side
-            transforms.Pad(padding=(40, 110, 40, 110)),  # Pad to 640x640
+            transforms.Pad(padding=(70, 160, 70, 160)),  # Pad to 640x640
             transforms.ToTensor()
         ])
-        img = transform(img).unsqueeze(0).to('cuda:0')  # Transform to tensor and add batch dimension
+        img = transform(img).unsqueeze(0).to(self.device)
         self.model(img)
         return self.features
 
 
 # %%
-num_demos = 24
+device = 'cuda:0'
+num_modes = 2
+num_demos = 10
 t_steps = 400
-dims = 256 * 16 * 16
-feats = torch.zeros(num_demos, dims)
-trajs = torch.zeros(num_demos, t_steps, 8)
+dims = comp_filter_size * 20 * 20
+feats = torch.zeros(num_demos*num_modes, dims)
+trajs = torch.zeros(num_demos*num_modes, t_steps, 3)
 
 if is_save:
-    model = YOLO('yolov8m.pt').to('cuda:0')
-    feature_extractor = FeatureExtractor(model)
+    model = YOLO('yolov8l.pt').to(device)
+    feature_extractor = FeatureExtractor(model, device=device)
 
     layer_names = ['model.21']
     feature_extractor.register_hooks(layer_names)
 
-    # Extract features for a given image
-    for i in range(num_demos):
-        img_path = f'data/{i}/img.jpeg'
-        features = feature_extractor.extract_features(img_path)
-        feats[i] = features[0].view(-1)
+    for mode in range(num_modes):
+        for i in range(num_demos):
+            ind = mode*num_demos + i
+            img_path = f'data/{mode}/{i}/img.jpeg'
+            features = feature_extractor.extract_features(img_path)
+            feats[ind] = features[0].view(-1)
 
-        data_folder = f'/home/yigit/projects/cnep/baxter/data/{i}/'
-        # iterate over all files in the in_folder
-        for filename in os.listdir(data_folder):
-            d = os.path.join(data_folder, filename)
-            if filename.endswith('.csv'):
-                temp_data = []
-                with open(d, 'r') as f:
-                    for j, line in enumerate(csv.reader(f)):
-                        if j > 0:
-                            temp_data.append([float(line[3]), float(line[4]), float(line[5]), float(line[6]), float(line[7]), float(line[8]), float(line[9]), float(line[10])])  # p, q, gripper
+            data_folder = f'/home/yigit/projects/cnep/baxter/data/{mode}/{i}/'
+            # iterate over all files in the data_folder
+            for filename in os.listdir(data_folder):
+                d = os.path.join(data_folder, filename)
+                if filename.endswith('.csv'):
+                    temp_data = []
+                    with open(d, 'r') as f:
+                        for j, line in enumerate(csv.reader(f)):
+                            if j > 0:
+                                # temp_data.append([float(line[3]), float(line[4]), float(line[5]), float(line[6]), float(line[7]), float(line[8]), float(line[9]), (float(line[10])/50)-1])  # p, q, gripper
+                                temp_data.append([float(line[3]), float(line[4]), float(line[5])])  # p
 
-        ids = torch.linspace(0, len(temp_data)-1, t_steps).int()
-
-        for j in range(t_steps):
-            trajs[i, j] = torch.tensor(temp_data[ids[j]])
+            ids = torch.linspace(0, len(temp_data)-1, t_steps).int()
+            for j in range(t_steps):
+                trajs[ind, j] = torch.tensor(temp_data[ids[j]])
 
     torch.save(trajs, 'trajs.pt')
     torch.save(feats, 'feats.pt')
@@ -144,17 +149,23 @@ else:
 print("Device :", device)
 
 # %%
-num_demos, v_num_demos = 2, 2
-num_classes = 2  # Number of modes
+num_demos, v_num_demos = 16, 4
+num_classes = num_modes
 num_indiv = num_demos // num_classes  # Number of trajectories per mode
 num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
 
 dx = 1
 dg = dims
-dy = 8
+dy = 3
 batch_size = 2
-n_max, m_max = 20, 20
+n_max, m_max = 12, 12
 t_steps = trajs.shape[1]
+
+perm_ids = torch.randperm(num_demos + v_num_demos)
+train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
+
+train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
+train_feats, val_feats = feats[train_ids], feats[val_ids]
 
 # %%
 obs = torch.zeros((batch_size, n_max, dx+dg+dy), dtype=torch.float32, device=device)
@@ -171,8 +182,8 @@ def prepare_masked_batch(traj_ids: list):
     tar_mask.fill_(False)
 
     for i, traj_id in enumerate(traj_ids):
-        traj = trajs[traj_id]
-        feat = feats[traj_id]
+        traj = train_trajs[traj_id]
+        feat = train_feats[traj_id]
         n = torch.randint(1, n_max, (1,)).item()
         m = torch.randint(1, m_max, (1,)).item()
 
@@ -202,8 +213,8 @@ def prepare_masked_val_batch(traj_ids: list):
     val_obs_mask.fill_(False)
 
     for i, traj_id in enumerate(traj_ids):
-        traj = trajs[traj_id]
-        feat = feats[traj_id]
+        traj = val_trajs[traj_id]
+        feat = val_feats[traj_id]
         n = torch.randint(1, n_max, (1,)).item()
 
         permuted_ids = torch.randperm(t_steps)
@@ -220,11 +231,11 @@ def prepare_masked_val_batch(traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(dx+dg, dy, n_max, n_max, [512,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
-optimizer_cnep = torch.optim.Adam(lr=3e-4, params=cnep_.parameters())
+cnep_ = CNEP(dx+dg, dy, n_max, n_max, [768, 256], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+optimizer_cnep = torch.optim.Adam(lr=7e-4, params=cnep_.parameters())
 
-cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [512,128], decoder_hidden_dims=[256, 256], batch_size=batch_size, device=device)
-optimizer_cnmp = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
+cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [768, 256], decoder_hidden_dims=[256, 256], batch_size=batch_size, device=device)
+optimizer_cnmp = torch.optim.Adam(lr=7e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
     total_num = 0
@@ -254,7 +265,7 @@ if not os.path.exists(f'{root_folder}saved_models/'):
     os.makedirs(f'{root_folder}saved_models/')
 
 
-epochs = 1_000_000
+epochs = 2_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = v_num_demos//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss_cnmp, avg_loss_cnep = 0, 0
@@ -316,8 +327,8 @@ for epoch in range(epochs):
                 vp_means = p[dec_id, torch.arange(batch_size), :, :dy]
                 val_err_cnep += mse_loss(vp_means, val_tar_y).item()
 
-            val_err_cnmp = val_err_cnmp/v_epoch_iter
-            val_err_cnep = val_err_cnep/v_epoch_iter
+            val_err_cnmp = val_err_cnmp/(v_epoch_iter*t_steps)
+            val_err_cnep = val_err_cnep/(v_epoch_iter*t_steps)
 
             if val_err_cnmp < min_vl_cnmp:
                 min_vl_cnmp = val_err_cnmp
@@ -338,6 +349,10 @@ for epoch in range(epochs):
     if epoch % val_per_epoch == 0:
         print("Epoch: {}, Loss: {}, {}, Min Err: {}, {}".format(epoch, avg_loss_cnmp/val_per_epoch, avg_loss_cnep/val_per_epoch, min_vl_cnmp, min_vl_cnep))
         avg_loss_cnmp, avg_loss_cnep = 0, 0
+
+    if epoch % 500_000 == 0 and epoch > 1:
+        torch.save(cnmp_.state_dict(), f'{root_folder}saved_models/last_cnmp.pt')
+        torch.save(cnep_.state_dict(), f'{root_folder}saved_models/last_cnep.pt')
 
 torch.save(torch.Tensor(tl_cnmp), cnmp_tl_path)
 torch.save(torch.Tensor(ve_cnmp), cnmp_ve_path)
