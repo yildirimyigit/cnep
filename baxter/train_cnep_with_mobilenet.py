@@ -8,7 +8,7 @@ import os
 import csv
 
 
-is_save = True
+is_save = False
 extract = True
 device = 'cuda:0'
 
@@ -146,7 +146,6 @@ num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
 
 dx = 1
 dg = dims
-dy = 3
 batch_size = 4
 n_max, m_max = 12, 12
 
