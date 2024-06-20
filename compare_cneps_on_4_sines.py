@@ -1,3 +1,4 @@
+# %%
 from models.cnep import CNEP
 
 from data.data_generators import *
@@ -25,21 +26,21 @@ else:
 
 print("Device :", device)
 
-
-batch_size = 32
-n_max, m_max = 10, 10  # max number of points in context set and target set
+# %%
+batch_size = 64
+n_max, m_max = 8, 8  # max number of points in context set and target set
 
 t_steps = 200
-num_demos = 128
+num_demos = 256
 num_classes = 4
 num_indiv = num_demos//num_classes  # number of demos per class
 noise_clip = 0.0
 dx, dy = 1, 1
 
-num_val = 32
+num_val = 64
 num_val_indiv = num_val//num_classes
 
-
+# %%
 x = torch.linspace(0, 1, 200).repeat(num_indiv, 1)
 y = torch.zeros(num_demos, t_steps, dy)
 
@@ -48,19 +49,16 @@ vy = torch.zeros(num_val, t_steps, dy)
 
 for i in range(num_classes):
     start_ind = i * num_indiv
-    coeff = (i + 1) / 2 * torch.pi
-    phase_shifts = torch.rand(num_indiv) * 5e-2 * torch.pi
+    coeff = (i+1) / 3 * torch.pi
+    phase_shifts = torch.rand(num_indiv) * 3e-2 * torch.pi
 
     # Expand dimensions for proper broadcasting (without the extra unsqueeze)
     expanded_x = x.expand(num_indiv, -1)  # Shape: (32, 200)
-    expanded_x += 0.2
+    expanded_x += 0.1
     expanded_phase_shifts = phase_shifts.unsqueeze(1).expand(-1, x.shape[1])  # Shape: (32, 200)
 
     # Now the element-wise operations work correctly
-    y[start_ind: start_ind + num_indiv, :, :] = (
-        torch.unsqueeze(generate_sin(expanded_x * coeff + expanded_phase_shifts), 2) + 1
-    ) / 2.0
-
+    y[start_ind: start_ind + num_indiv, :, :] = torch.unsqueeze(generate_sin(expanded_x * coeff + expanded_phase_shifts), 2)
 
     noise = torch.unsqueeze(torch.clamp(torch.randn(vx.shape)*0.01, min=0) - noise_clip, -1)
 
@@ -72,7 +70,25 @@ x = torch.unsqueeze(x.repeat(num_classes, 1), 2)  # since dx = 1
 vx = torch.unsqueeze(vx.repeat(num_classes, 1), 2)
 print("X:", x.shape, "Y:", y.shape, "VX:", vx.shape, "VY:", vy.shape)
 
+# %%
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
+# colors = [sns.color_palette('tab10')[0], sns.color_palette('tab10')[1], sns.color_palette('tab10')[2], sns.color_palette('tab10')[3]]
+# sns.set_palette('tab10')
+
+# plt.figure(figsize=(6, 4))
+# for i in range(num_val):
+#     plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), color=colors[i//num_val_indiv], alpha=0.5)
+#     # plt.plot(vx[i, :, 0].cpu(), vy[i, :, 0].cpu(), 'k', alpha=0.5)
+
+# # plt.legend(loc='lower left', fontsize=14)
+# plt.grid(True)
+# plt.xlabel('Time (s)', fontsize=14)
+# plt.ylabel('Amplitude', fontsize=14)
+# plt.title(f'Sine Waves', fontsize=16)
+
+# %%
 obs = torch.zeros((batch_size, n_max, dx+dy), dtype=torch.float32, device=device)
 tar_x = torch.zeros((batch_size, m_max, dx), dtype=torch.float32, device=device)
 tar_y = torch.zeros((batch_size, m_max, dy), dtype=torch.float32, device=device)
@@ -131,13 +147,14 @@ def prepare_masked_val_batch(t: list, traj_ids: list):
         val_tar_x[i] = (m_ids/t_steps).unsqueeze(1)
         val_tar_y[i] = traj[m_ids]
 
-model2_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=2, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+# %%
+model2_ = CNEP(1, 1, n_max, n_max, [256, 256], num_decoders=2, decoder_hidden_dims=[256, 256], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer2 = torch.optim.Adam(lr=3e-4, params=model2_.parameters())
 
-model4_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model4_ = CNEP(1, 1, n_max, n_max, [256, 256], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer4 = torch.optim.Adam(lr=3e-4, params=model4_.parameters())
 
-model8_ = CNEP(1, 1, n_max, n_max, [128,128], num_decoders=8, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+model8_ = CNEP(1, 1, n_max, n_max, [256, 256], num_decoders=8, decoder_hidden_dims=[64, 64], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer8 = torch.optim.Adam(lr=3e-4, params=model8_.parameters())
 
 def get_parameter_count(model):
@@ -155,6 +172,7 @@ if torch.__version__ >= "2.0":
 else:
     model2, model4, model8 = model2_, model4_, model8_
 
+# %%
 import time
 import os
 
@@ -173,7 +191,7 @@ if not os.path.exists(f'{root_folder}img/'):
 torch.save(y, f'{root_folder}y.pt')
 
 
-epochs = 1_500_000
+epochs = 2_000_000
 epoch_iter = num_demos//batch_size  # number of batches per epoch (e.g. 100//32 = 3)
 v_epoch_iter = num_val//batch_size  # number of batches per validation (e.g. 100//32 = 3)
 avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
@@ -182,6 +200,12 @@ val_per_epoch = 5000
 min_vl2, min_vl4, min_vl8 = 1000000, 1000000, 1000000
 
 mse_loss = torch.nn.MSELoss()
+
+tl2, tl4, tl8 = [], [], []
+ve2, ve4, ve8 = [], [], []
+
+cnep_tl_path = f'{root_folder}cnep_training_loss.pt'
+cnep_ve_path = f'{root_folder}cnep_validation_error.pt'
 
 for epoch in range(epochs):
     epoch_loss2, epoch_loss4, epoch_loss8 = 0, 0, 0
@@ -219,6 +243,10 @@ for epoch in range(epochs):
     epoch_loss4 = epoch_loss4/epoch_iter
     epoch_loss8 = epoch_loss8/epoch_iter
 
+    tl2.append(epoch_loss2)
+    tl4.append(epoch_loss4)
+    tl8.append(epoch_loss8)
+
     if epoch % val_per_epoch == 0:
         with torch.no_grad():
             v_traj_ids = torch.randperm(vx.shape[0])[:batch_size*v_epoch_iter].chunk(v_epoch_iter)
@@ -242,20 +270,24 @@ for epoch in range(epochs):
                 vp_means = p_wta[dec_id, torch.arange(batch_size), :, :dy]
                 val_loss8 += mse_loss(vp_means, val_tar_y).item()
 
+            ve2.append(val_loss2)
+            ve4.append(val_loss4)
+            ve8.append(val_loss8)
+
             if val_loss2 < min_vl2:
                 min_vl2 = val_loss2
                 print(f'New best 2: {min_vl2}')
-                torch.save(model2_.state_dict(), f'{root_folder}saved_models/wta2.pt')
+                torch.save(model2_.state_dict(), f'{root_folder}saved_models/cnep2.pt')
 
             if val_loss4 < min_vl4:
                 min_vl4 = val_loss4
                 print(f'New best 4: {min_vl4}')
-                torch.save(model4_.state_dict(), f'{root_folder}saved_models/wta4.pt')
+                torch.save(model4_.state_dict(), f'{root_folder}saved_models/cnep4.pt')
 
             if val_loss8 < min_vl8:
                 min_vl8 = val_loss8
                 print(f'New best 8: {min_vl8}')
-                torch.save(model8_.state_dict(), f'{root_folder}saved_models/wta8.pt')
+                torch.save(model8_.state_dict(), f'{root_folder}saved_models/cnep8.pt')
             
             print(f'Bests: {min_vl2}, {min_vl4}, {min_vl8}')
 
@@ -266,4 +298,15 @@ for epoch in range(epochs):
     if epoch % val_per_epoch == 0:
         print("Epoch: {}, CNEP Losses: {}, {}, {}".format(epoch, avg_loss2/val_per_epoch, avg_loss4/val_per_epoch, avg_loss8/val_per_epoch))
         avg_loss2, avg_loss4, avg_loss8 = 0, 0, 0
+
+torch.save(torch.Tensor(tl2), cnep_tl_path+'_2')
+torch.save(torch.Tensor(ve2), cnep_ve_path+'_2')
+torch.save(torch.Tensor(tl4), cnep_tl_path+'_4')
+torch.save(torch.Tensor(ve4), cnep_ve_path+'_4')
+torch.save(torch.Tensor(tl8), cnep_tl_path+'_8')
+torch.save(torch.Tensor(ve8), cnep_ve_path+'_8')
+
+# %%
+
+
 
