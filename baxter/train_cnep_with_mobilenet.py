@@ -12,7 +12,7 @@ is_save = False
 extract = True
 device = 'cuda:0'
 
-dy = 8
+dy = 3
 
 # Load pre-trained MobileNetV2
 model = models.mobilenet_v2(pretrained=True).to(device)
@@ -23,7 +23,8 @@ model.classifier = torch.nn.Identity()
 model.eval()
 
 # %%
-num_modes = 2
+num_modes = 4
+modes = [0, 1, 3, 4]
 num_demos = 10
 t_steps = 400
 dims = 1280  # MobileNetV2 feature size
@@ -39,9 +40,9 @@ def crop_left(im):
     return transforms.functional.crop(im, top=0, left=0, height=300, width=480)
 
 if extract:
-    for mode in range(num_modes):
+    for m, mode in enumerate(modes):
         for i in range(num_demos):
-            ind = mode*num_demos + i
+            ind = m*num_demos + i
             img_path = f'data/{mode}/{i}/img.jpeg'
             img = Image.open(img_path).convert('RGB')  # Load image using PIL
             transform = transforms.Compose([
@@ -52,7 +53,7 @@ if extract:
             img = transform(img).unsqueeze(0).to(device)
             with torch.no_grad():
                 features = model(img) 
-            feats[ind] = torch.flatten(features)
+            feats[ind] = torch.flatten(features) / dims
 
             data_folder = f'/home/yigit/projects/cnep/baxter/data/{mode}/{i}/'
             # iterate over all files in the data_folder
@@ -82,11 +83,11 @@ if extract:
         minmax8[k] = torch.tensor([min_val, max_val])
 
     if is_save:
-        torch.save(trajs3, 'trajs_normalized_3.pt')
-        torch.save(trajs8, 'trajs_normalized_8.pt')
-        torch.save(feats, 'feats_mn.pt')
-        torch.save(minmax3, 'minmax3.pt')
-        torch.save(minmax8, 'minmax8.pt')
+        torch.save(trajs3, '0_1_3_4/trajs_normalized_3.pt')
+        torch.save(trajs8, '0_1_3_4/trajs_normalized_8.pt')
+        torch.save(feats, '0_1_3_4/feats_mn.pt')
+        torch.save(minmax3, '0_1_3_4/minmax3.pt')
+        torch.save(minmax8, '0_1_3_4/minmax8.pt')
 
     if dy == 3:
         trajs = trajs3
@@ -94,10 +95,10 @@ if extract:
         trajs = trajs8
 else:
     if dy == 3:
-        trajs = torch.load('trajs_normalized_3.pt')
+        trajs = torch.load('0_1_3_4/trajs_normalized_3.pt')
     else:
-        trajs = torch.load('trajs_normalized_8.pt')
-    feats = torch.load('feats.pt')
+        trajs = torch.load('0_1_3_4/trajs_normalized_8.pt')
+    feats = torch.load('0_1_3_4/feats.pt')
 
 # %%
 import sys
@@ -139,23 +140,39 @@ else:
 print("Device :", device)
 
 # %%
-num_demos, v_num_demos = 16, 4
+num_demos, v_num_demos = 32, 8
 num_classes = num_modes
 num_indiv = num_demos // num_classes  # Number of trajectories per mode
 num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
 
 dx = 1
 dg = dims
-batch_size = 4
-n_max, m_max = 12, 12
+batch_size = 8
+n_max, m_max = 20, 20
 
 perm_ids = torch.randperm(num_demos + v_num_demos)
 train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
 
-train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
-train_feats, val_feats = feats[train_ids], feats[val_ids]
-# train_trajs, val_trajs = trajs, trajs
-# train_feats, val_feats = feats, feats
+train_trajs = torch.zeros(num_demos, t_steps, dy)
+train_feats = torch.zeros(num_demos, dg)
+val_trajs = torch.zeros(v_num_demos, t_steps, dy)
+val_feats = torch.zeros(v_num_demos, dg)
+
+for i in range(num_modes):
+    perm_ids = torch.randperm(num_indiv + num_val_indiv)
+    train_ids, val_ids = perm_ids[:num_indiv], perm_ids[num_indiv:]
+    train_trajs[i*num_indiv:(i+1)*num_indiv] = trajs[train_ids + i*num_indiv]
+    train_feats[i*num_indiv:(i+1)*num_indiv] = feats[train_ids + i*num_indiv]
+    val_trajs[i*num_val_indiv:(i+1)*num_val_indiv] = trajs[val_ids + i*num_indiv]
+    val_feats[i*num_val_indiv:(i+1)*num_val_indiv] = feats[val_ids + i*num_indiv]
+
+
+# train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
+# train_feats, val_feats = feats[train_ids], feats[val_ids]
+#train_trajs, val_trajs = trajs, trajs
+#train_feats, val_feats = feats, feats
+
+print(train_trajs.shape, val_trajs.shape, train_feats.shape, val_feats.shape)
 
 # %%
 obs = torch.zeros((batch_size, n_max, dx+dg+dy), dtype=torch.float32, device=device)
@@ -221,10 +238,10 @@ def prepare_masked_val_batch(traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(dx+dg, dy, n_max, n_max, [512, 256], num_decoders=2, decoder_hidden_dims=[256, 256], batch_size=batch_size, scale_coefs=True, device=device)
+cnep_ = CNEP(dx+dg, dy, n_max, n_max, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer_cnep = torch.optim.Adam(lr=3e-4, params=cnep_.parameters())
 
-cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [512, 256], decoder_hidden_dims=[512, 512], batch_size=batch_size, device=device)
+cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [128, 128, 128], decoder_hidden_dims=[512, 512], batch_size=batch_size, device=device)
 optimizer_cnmp = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
@@ -272,6 +289,13 @@ cnmp_tl_path, cnep_tl_path = f'{root_folder}cnmp_training_loss.pt', f'{root_fold
 cnmp_ve_path, cnep_ve_path = f'{root_folder}cnmp_validation_error.pt', f'{root_folder}cnep_validation_error.pt'
 
 for epoch in range(epochs):
+
+    perm_ids = torch.randperm(num_demos + v_num_demos)
+    train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
+
+    train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
+    train_feats, val_feats = feats[train_ids], feats[val_ids]
+
     epoch_loss_cnmp, epoch_loss_cnep = 0, 0
 
     traj_ids = torch.randperm(num_demos)[:batch_size*epoch_iter].chunk(epoch_iter)  # [:batch_size*epoch_iter] because nof_trajectories may be indivisible by batch_size
@@ -346,6 +370,10 @@ for epoch in range(epochs):
 
 torch.save(torch.Tensor(tl_cnmp), cnmp_tl_path)
 torch.save(torch.Tensor(ve_cnmp), cnmp_ve_path)
+
+# %%
+torch.save(cnmp_.state_dict(), f'{root_folder}saved_models/last_cnmp.pt')
+torch.save(cnep_.state_dict(), f'{root_folder}saved_models/last_cnep.pt')
 
 # %%
 
