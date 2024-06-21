@@ -24,8 +24,8 @@ model.eval()
 
 # %%
 num_modes = 4
-modes = [0, 1, 3, 4]
-num_demos = 1
+modes = [0, 1, 1, 3]
+num_demos = 10
 t_steps = 400
 dims = 1280  # MobileNetV2 feature size
 feats = torch.zeros(num_demos*num_modes, dims)
@@ -34,7 +34,6 @@ trajs8 = torch.zeros(num_demos*num_modes, t_steps, 8)
 
 minmax3 = torch.zeros(3, 2)
 minmax8 = torch.zeros(8, 2)
-
 
 def crop_left(im): 
     return transforms.functional.crop(im, top=0, left=0, height=300, width=480)
@@ -83,11 +82,11 @@ if extract:
         minmax8[k] = torch.tensor([min_val, max_val])
 
     if is_save:
-        torch.save(trajs3, '0_1_3_4/trajs_normalized_3.pt')
-        torch.save(trajs8, '0_1_3_4/trajs_normalized_8.pt')
-        torch.save(feats, '0_1_3_4/feats_mn.pt')
-        torch.save(minmax3, '0_1_3_4/minmax3.pt')
-        torch.save(minmax8, '0_1_3_4/minmax8.pt')
+        torch.save(trajs3, '0_1_2_3/trajs_normalized_3.pt')
+        torch.save(trajs8, '0_1_2_3/trajs_normalized_8.pt')
+        torch.save(feats, '0_1_2_3/feats_mn.pt')
+        torch.save(minmax3, '0_1_2_3/minmax3.pt')
+        torch.save(minmax8, '0_1_2_3/minmax8.pt')
 
     if dy == 3:
         trajs = trajs3
@@ -95,10 +94,10 @@ if extract:
         trajs = trajs8
 else:
     if dy == 3:
-        trajs = torch.load('0_1_3_4/trajs_normalized_3.pt')
+        trajs = torch.load('0_1_2_3/trajs_normalized_3.pt')
     else:
-        trajs = torch.load('0_1_3_4/trajs_normalized_8.pt')
-    feats = torch.load('0_1_3_4/feats.pt')
+        trajs = torch.load('0_1_2_3/trajs_normalized_8.pt')
+    feats = torch.load('0_1_2_3/feats.pt')
 
 # %%
 import sys
@@ -134,7 +133,7 @@ else:
 print("Device :", device)
 
 # %%
-num_demos, v_num_demos = 4, 4
+num_demos, v_num_demos = 32, 8
 num_classes = num_modes
 num_indiv = num_demos // num_classes  # Number of trajectories per mode
 num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
@@ -144,27 +143,27 @@ dg = dims
 batch_size = 4
 n_max, m_max = 20, 20
 
-# perm_ids = torch.randperm(num_demos + v_num_demos)
-# train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
+perm_ids = torch.randperm(num_demos + v_num_demos)
+train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
 
-# train_trajs = torch.zeros(num_demos, t_steps, dy)
-# train_feats = torch.zeros(num_demos, dg)
-# val_trajs = torch.zeros(v_num_demos, t_steps, dy)
-# val_feats = torch.zeros(v_num_demos, dg)
+train_trajs = torch.zeros(num_demos, t_steps, dy)
+train_feats = torch.zeros(num_demos, dg)
+val_trajs = torch.zeros(v_num_demos, t_steps, dy)
+val_feats = torch.zeros(v_num_demos, dg)
 
-# for i in range(num_modes):
-#     perm_ids = torch.randperm(num_indiv + num_val_indiv)
-#     train_ids, val_ids = perm_ids[:num_indiv], perm_ids[num_indiv:]
-#     train_trajs[i*num_indiv:(i+1)*num_indiv] = trajs[train_ids + i*num_indiv]
-#     train_feats[i*num_indiv:(i+1)*num_indiv] = feats[train_ids + i*num_indiv]
-#     val_trajs[i*num_val_indiv:(i+1)*num_val_indiv] = trajs[val_ids + i*num_indiv]
-#     val_feats[i*num_val_indiv:(i+1)*num_val_indiv] = feats[val_ids + i*num_indiv]
+for i in range(num_modes):
+    perm_ids = torch.randperm(num_indiv + num_val_indiv)
+    train_ids, val_ids = perm_ids[:num_indiv], perm_ids[num_indiv:]
+    train_trajs[i*num_indiv:(i+1)*num_indiv] = trajs[train_ids + i*num_indiv]
+    train_feats[i*num_indiv:(i+1)*num_indiv] = feats[train_ids + i*num_indiv]
+    val_trajs[i*num_val_indiv:(i+1)*num_val_indiv] = trajs[val_ids + i*num_indiv]
+    val_feats[i*num_val_indiv:(i+1)*num_val_indiv] = feats[val_ids + i*num_indiv]
 
 
 # train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
 # train_feats, val_feats = feats[train_ids], feats[val_ids]
-train_trajs, val_trajs = trajs, trajs
-train_feats, val_feats = feats, feats
+# train_trajs, val_trajs = trajs, trajs
+# train_feats, val_feats = feats, feats
 
 print(train_trajs.shape, val_trajs.shape, train_feats.shape, val_feats.shape)
 
@@ -232,10 +231,10 @@ def prepare_masked_val_batch(traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(dx+dg, dy, n_max, n_max, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[256, 256], batch_size=batch_size, scale_coefs=True, device=device)
+cnep_ = CNEP(dx+dg, dy, n_max, n_max, [256, 256, 256], num_decoders=4, decoder_hidden_dims=[256, 256], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer_cnep = torch.optim.Adam(lr=3e-4, params=cnep_.parameters())
 
-cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [128, 128, 128], decoder_hidden_dims=[1024, 1024], batch_size=batch_size, device=device)
+cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [256, 256, 256], decoder_hidden_dims=[1024, 1024], batch_size=batch_size, device=device)
 optimizer_cnmp = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
