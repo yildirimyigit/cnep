@@ -8,7 +8,7 @@ import os
 import csv
 
 
-is_save = False
+is_save = True
 extract = True
 device = 'cuda:0'
 
@@ -25,7 +25,7 @@ model.eval()
 # %%
 num_modes = 4
 modes = [0, 1, 3, 4]
-num_demos = 10
+num_demos = 1
 t_steps = 400
 dims = 1280  # MobileNetV2 feature size
 feats = torch.zeros(num_demos*num_modes, dims)
@@ -103,12 +103,6 @@ else:
 # %%
 import sys
 import torch
-import numpy as np
-import math
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 
 folder_path = '../models/'
 if folder_path not in sys.path:
@@ -140,37 +134,37 @@ else:
 print("Device :", device)
 
 # %%
-num_demos, v_num_demos = 32, 8
+num_demos, v_num_demos = 4, 4
 num_classes = num_modes
 num_indiv = num_demos // num_classes  # Number of trajectories per mode
 num_val_indiv = v_num_demos // num_classes  # Number of trajectories per mode
 
 dx = 1
 dg = dims
-batch_size = 8
+batch_size = 4
 n_max, m_max = 20, 20
 
-perm_ids = torch.randperm(num_demos + v_num_demos)
-train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
+# perm_ids = torch.randperm(num_demos + v_num_demos)
+# train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
 
-train_trajs = torch.zeros(num_demos, t_steps, dy)
-train_feats = torch.zeros(num_demos, dg)
-val_trajs = torch.zeros(v_num_demos, t_steps, dy)
-val_feats = torch.zeros(v_num_demos, dg)
+# train_trajs = torch.zeros(num_demos, t_steps, dy)
+# train_feats = torch.zeros(num_demos, dg)
+# val_trajs = torch.zeros(v_num_demos, t_steps, dy)
+# val_feats = torch.zeros(v_num_demos, dg)
 
-for i in range(num_modes):
-    perm_ids = torch.randperm(num_indiv + num_val_indiv)
-    train_ids, val_ids = perm_ids[:num_indiv], perm_ids[num_indiv:]
-    train_trajs[i*num_indiv:(i+1)*num_indiv] = trajs[train_ids + i*num_indiv]
-    train_feats[i*num_indiv:(i+1)*num_indiv] = feats[train_ids + i*num_indiv]
-    val_trajs[i*num_val_indiv:(i+1)*num_val_indiv] = trajs[val_ids + i*num_indiv]
-    val_feats[i*num_val_indiv:(i+1)*num_val_indiv] = feats[val_ids + i*num_indiv]
+# for i in range(num_modes):
+#     perm_ids = torch.randperm(num_indiv + num_val_indiv)
+#     train_ids, val_ids = perm_ids[:num_indiv], perm_ids[num_indiv:]
+#     train_trajs[i*num_indiv:(i+1)*num_indiv] = trajs[train_ids + i*num_indiv]
+#     train_feats[i*num_indiv:(i+1)*num_indiv] = feats[train_ids + i*num_indiv]
+#     val_trajs[i*num_val_indiv:(i+1)*num_val_indiv] = trajs[val_ids + i*num_indiv]
+#     val_feats[i*num_val_indiv:(i+1)*num_val_indiv] = feats[val_ids + i*num_indiv]
 
 
 # train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
 # train_feats, val_feats = feats[train_ids], feats[val_ids]
-#train_trajs, val_trajs = trajs, trajs
-#train_feats, val_feats = feats, feats
+train_trajs, val_trajs = trajs, trajs
+train_feats, val_feats = feats, feats
 
 print(train_trajs.shape, val_trajs.shape, train_feats.shape, val_feats.shape)
 
@@ -238,10 +232,10 @@ def prepare_masked_val_batch(traj_ids: list):
         val_tar_y[i] = traj[m_ids]
 
 # %%
-cnep_ = CNEP(dx+dg, dy, n_max, n_max, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[128, 128], batch_size=batch_size, scale_coefs=True, device=device)
+cnep_ = CNEP(dx+dg, dy, n_max, n_max, [128, 128, 128], num_decoders=4, decoder_hidden_dims=[256, 256], batch_size=batch_size, scale_coefs=True, device=device)
 optimizer_cnep = torch.optim.Adam(lr=3e-4, params=cnep_.parameters())
 
-cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [128, 128, 128], decoder_hidden_dims=[512, 512], batch_size=batch_size, device=device)
+cnmp_ = CNMP(dx+dg, dy, n_max, m_max, [128, 128, 128], decoder_hidden_dims=[1024, 1024], batch_size=batch_size, device=device)
 optimizer_cnmp = torch.optim.Adam(lr=3e-4, params=cnmp_.parameters())
 
 def get_parameter_count(model):
@@ -290,8 +284,10 @@ cnmp_ve_path, cnep_ve_path = f'{root_folder}cnmp_validation_error.pt', f'{root_f
 
 for epoch in range(epochs):
 
-    perm_ids = torch.randperm(num_demos + v_num_demos)
-    train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
+    # perm_ids = torch.randperm(num_demos + v_num_demos)
+    # train_ids, val_ids = perm_ids[:num_demos], perm_ids[num_demos:]
+    perm_ids = torch.randperm(num_demos)
+    train_ids, val_ids = perm_ids[:num_demos], perm_ids[:num_demos]
 
     train_trajs, val_trajs = trajs[train_ids], trajs[val_ids]
     train_feats, val_feats = feats[train_ids], feats[val_ids]
