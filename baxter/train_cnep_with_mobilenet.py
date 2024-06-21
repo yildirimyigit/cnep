@@ -10,6 +10,7 @@ import csv
 
 is_save = True
 extract = True
+copied = False
 device = 'cuda:0'
 
 dy = 3
@@ -24,7 +25,7 @@ model.eval()
 
 # %%
 num_modes = 4
-modes = [0, 1, 1, 3]
+modes = [0, 1, 2, 3]
 num_demos = 10
 t_steps = 400
 dims = 1280  # MobileNetV2 feature size
@@ -38,7 +39,18 @@ minmax8 = torch.zeros(8, 2)
 def crop_left(im): 
     return transforms.functional.crop(im, top=0, left=0, height=300, width=480)
 
+
 if extract:
+    if not copied:
+        copied = True
+        common_data_file = f'/home/yigit/projects/cnep/baxter/data/0/0/_2024-06-21_15-41-28.csv'
+        with open(common_data_file, 'r') as f:
+            for l, line in enumerate(csv.reader(f)):
+                if l == 1:
+                    init3 = torch.tensor([float(line[3]), float(line[4]), float(line[5])])
+                    init8 = torch.tensor([float(line[3]), float(line[4]), float(line[5]), float(line[6]), float(line[7]), float(line[8]), float(line[9]), float(line[9])])
+                    break
+
     for m, mode in enumerate(modes):
         for i in range(num_demos):
             ind = m*num_demos + i
@@ -60,10 +72,13 @@ if extract:
                 d = os.path.join(data_folder, filename)
                 if filename.endswith('.csv'):
                     temp_data_3, temp_data_8 = [], []
+                    for ctr in range(30):
+                        temp_data_3.append(init3)
+                        temp_data_8.append(init8)
                     with open(d, 'r') as f:
                         for j, line in enumerate(csv.reader(f)):
-                            if j > 0:
-                                temp_data_8.append([float(line[3]), float(line[4]), float(line[5]), float(line[6]), float(line[7]), float(line[8]), float(line[9]), float(line[9])])  # p, q, gripper
+                            if j > 0:  # skip the header
+                                temp_data_8.append([float(line[3]), float(line[4]), float(line[5]), float(line[6]), float(line[7]), float(line[8]), float(line[9]), float(line[10])])  # p, q, gripper
                                 temp_data_3.append([float(line[3]), float(line[4]), float(line[5])])  # p
 
             ids = torch.linspace(0, len(temp_data_3)-1, t_steps).int()
