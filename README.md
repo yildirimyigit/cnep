@@ -17,6 +17,16 @@ Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8
 <p align="center">
     <img src="https://github.com/user-attachments/assets/572980a1-0f43-404c-8bfa-1811b27af4c0"/>
 </p>
+
+<hr>
+<p>
+    With continuous conditioning on the current configuration of the tabletop, CNEP can adapt to the changes in the environment on the fly and select among multiple experts to properly control the robot. The video showing the online control experiment is here: https://youtu.be/ffnIhrmjwgo
+</p>
+
+<p align="center">
+<img src="https://github.com/user-attachments/assets/00d6ee8b-9f74-432e-b82c-d74cb3926368" width="200px"/>  |  <img src="https://github.com/user-attachments/assets/130c67db-cf7c-4121-9513-2fc642c54c9f" width="200px"/>  |  <img src="https://github.com/user-attachments/assets/1a406ba0-d05e-47d5-9bea-f7f197d58d84" width="200px"/>
+</p>
+
 <hr>
 <p>
 Trained on only two trajectories, CNEP produces trajectories similar to the demonstrations. In contrast, other methods (CNMP in this case) produce a mean response, which may lead to suboptimal behavior, as shown in the obstacle avoidance test.
