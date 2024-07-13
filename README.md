@@ -34,6 +34,12 @@ Trained on only two trajectories, CNEP produces trajectories similar to the demo
 <p align="center">
 <img src="https://github.com/yildirimyigit/cnep/blob/master/plots/start.gif" width="300px"/>  |  <img src="https://github.com/yildirimyigit/cnep/blob/master/plots/end.gif" width="300px"/> 
 </p>
+
+<p align="center">
+<img src="https://github.com/user-attachments/assets/2df1623a-7e12-4371-bfe8-355ca9c7fd3d" width="300px"/>  |  <img src="https://github.com/user-attachments/assets/aade4ca4-b74d-4ffd-8c5f-d154e93d1622" width="300px"/>
+</p>
+
+
 <hr>
 <p align="center">
 <img src="https://github.com/yildirimyigit/cnep/assets/3774448/f3bb7363-993e-4b30-97ae-3c52a229f8b0" width="80%" />
