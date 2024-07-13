@@ -18,7 +18,7 @@ Trained on only two trajectories, CNEP produces trajectories similar to the demo
 <img src="https://github.com/yildirimyigit/cnep/assets/3774448/f3bb7363-993e-4b30-97ae-3c52a229f8b0" width="80%" />
 </p>
 <hr>
-Here are some videos from this work: [https://youtube.com/playlist?list=PLXWw0F-8m_ZZD7fpGOKclzVJONXUifDiY&si=He22YmO8TgRCnqNR](https://youtube.com/playlist?list=PLXWw0F-8m_ZZD7fpGOKclzVJONXUifDiY&si=He22YmO8TgRCnqNR)
+Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8m_ZZD7fpGOKclzVJONXUifDiY&si=He22YmO8TgRCnqNR
 
 ## Getting Started
 ### Requirements
