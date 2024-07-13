@@ -24,7 +24,7 @@ Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8
 </p>
 
 <p align="center">
-<img src="https://github.com/user-attachments/assets/00d6ee8b-9f74-432e-b82c-d74cb3926368" width="200px"/>  |  <img src="https://github.com/user-attachments/assets/130c67db-cf7c-4121-9513-2fc642c54c9f" width="200px"/>  |  <img src="https://github.com/user-attachments/assets/1a406ba0-d05e-47d5-9bea-f7f197d58d84" width="200px"/>
+<img src="https://github.com/user-attachments/assets/00d6ee8b-9f74-432e-b82c-d74cb3926368" width="350px"/>  |  <img src="https://github.com/user-attachments/assets/130c67db-cf7c-4121-9513-2fc642c54c9f" width="350px"/>  |  <img src="https://github.com/user-attachments/assets/1a406ba0-d05e-47d5-9bea-f7f197d58d84" width="350px"/>
 </p>
 
 <hr>
