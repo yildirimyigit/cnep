@@ -9,7 +9,7 @@ CNEP is a novel deep learning architecture for Learning from Demonstration (LfD)
 ![__over](https://github.com/yildirimyigit/cnep/assets/3774448/4147b4f6-f29c-499a-a119-a5fb31b10aae)
 
 ### Some results:
-Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8m_ZZD7fpGOKclzVJONXUifDiY&si=He22YmO8TgRCnqNR
+Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8m_ZZD7fpGOKclzVJONXUifDiY
 <hr>
 <p>
     We assessed the performance of CNEP in comparison to Probabilistic Movement Primitives (ProMP) and Gaussian Mixture Models-Gaussian Mixture Regression (GMM-GMR) on a complex robotic task involving grasping and placing wine glasses onto a dish rack. This task involved high-dimensional sensorimotor trajectories of 1288 dimensions. Each model was trained on 40 expert demonstrations and expected to generate the necessary control commands to achieve successful task completion.  CNEP demonstrated superior performance by successfully completing the task, while ProMP and GMM-GMR were unable to achieve a successful grasp of the glass. A video demonstrating the results is available for further analysis: https://youtu.be/ffnIhrmjwgo
