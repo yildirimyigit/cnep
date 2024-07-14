@@ -27,6 +27,15 @@ Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8
 <img src="https://github.com/user-attachments/assets/00d6ee8b-9f74-432e-b82c-d74cb3926368" width="250px"/>  |  <img src="https://github.com/user-attachments/assets/130c67db-cf7c-4121-9513-2fc642c54c9f" width="250px"/>  |  <img src="https://github.com/user-attachments/assets/1a406ba0-d05e-47d5-9bea-f7f197d58d84" width="250px"/>
 </p>
 
+
+<hr>
+<p>
+    When there are multiple ways to complete a real-life task, multiple sensorimotor trajectories serve the same goal of achieving that task. If the number of the modalities of the training trajectories increases, modeling them separately, as CNEP does, becomes advantageous. In this comparison, we compared CNEP with ProMP, GMM-GMR, CNMP, and Stable MP (https://github.com/rperezdattari/Stable-Motion-Primitives-via-Imitation-and-Contrastive-Learning). Also, we included several CNEP variants for a quantitative comparison, which is given on the right. For explanations, please refer to the paper.
+</p>
+<p align="center">
+<img src="https://github.com/user-attachments/assets/a7f30709-cf28-487f-9b00-32bd3e5ae96a" height="300px" />  |  <img src="https://github.com/user-attachments/assets/8c6e1729-000c-47ab-adf8-15ec1af9abd4" height="300px" />
+</p>
+
 <hr>
 <p>
 Trained on only two trajectories, CNEP produces trajectories similar to the demonstrations. In contrast, other methods (CNMP in this case) produce a mean response, which may lead to suboptimal behavior, as shown in the obstacle avoidance test.
@@ -38,7 +47,6 @@ Trained on only two trajectories, CNEP produces trajectories similar to the demo
 <p align="center">
 <img src="https://github.com/user-attachments/assets/2df1623a-7e12-4371-bfe8-355ca9c7fd3d" width="300px"/>  |  <img src="https://github.com/user-attachments/assets/aade4ca4-b74d-4ffd-8c5f-d154e93d1622" width="300px"/>
 </p>
-
 
 <hr>
 <p align="center">
