@@ -1,4 +1,4 @@
-# Conditional Neural Expert Processes (CNEP)
+# Conditional Neural Expert Processes for Learning Movement Primitives from Demonstration
 
 This repository contains the source code for the paper "Conditional Neural Expert Processes for Learning Movement Primitives from Demonstration" by [Yigit Yildirim](https://www.cmpe.boun.edu.tr/~yigit.yildirim/) and [Emre Ugur](https://www.cmpe.boun.edu.tr/~emre). We both are members of the [CoLoRs Lab, Bogazici University](https://clrslab.wordpress.com/).
 
