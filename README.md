@@ -38,7 +38,7 @@ Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8
 
 <hr>
 <p>
-Trained on only two trajectories, CNEP produces trajectories similar to the demonstrations. In contrast, other methods (CNMP in this case) produce a mean response, which may lead to suboptimal behavior, as shown in the obstacle avoidance test.
+    We trained a CNMP and a CNEP with two experts on two demonstration trajectories. When queried from novel start and end points, CNEP produces trajectories similar to the demonstrations (shown in red and purple). In contrast, other methods (CNMP in this case) produce a mean response (shown in blue). This may lead to suboptimal behavior, as highlighted in the obstacle avoidance tests with a real robot.
 </p>
 <p align="center">
 <img src="https://github.com/yildirimyigit/cnep/blob/master/plots/start.gif" width="300px"/>  |  <img src="https://github.com/yildirimyigit/cnep/blob/master/plots/end.gif" width="300px"/> 
@@ -49,8 +49,19 @@ Trained on only two trajectories, CNEP produces trajectories similar to the demo
 </p>
 
 <hr>
+<p>
+    If only a single demonstration trajectory passes through an observation (conditioning) point, both models can successfully synthesize expert-like trajectories. This is the case for the plots in the right column. On the other hand, if there are multiple candidate trajectories passing through the same observation point that the trajectory-producing models are conditioned on, it is reasonable to expect a trajectory close to one of these candidates. Plots on the left show that CNEP successfully picks one of the modes and generates similar trajectories whereas CNMP produces average trajectories. 
+</p>
 <p align="center">
 <img src="https://github.com/yildirimyigit/cnep/assets/3774448/f3bb7363-993e-4b30-97ae-3c52a229f8b0" width="80%" />
+</p>
+
+<hr>
+<p>
+    To demonstrate that CNEP can model MP trajectories of higher dimensions just as easily, we trained a CNEP with a 56-dimensional trajectory of an actual stuntman realizing a cartwheel motion ([CMU Mocap dataset](http://mocap.cs.cmu.edu)). Then, we reproduced the same motion and ran the trajectory on a simulated humanoid.
+</p>
+<p align="center">
+![cw](https://github.com/user-attachments/assets/218ae0ba-dbd2-40a3-99c0-fde6064166f3)
 </p>
 
 ## Getting Started
