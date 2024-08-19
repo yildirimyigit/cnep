@@ -58,7 +58,7 @@ Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8
 
 <hr>
 <p>
-    To demonstrate that CNEP can model MP trajectories of higher dimensions just as easily, we trained a CNEP with a 56-dimensional trajectory of an actual stuntman realizing a cartwheel motion ([CMU Mocap dataset](http://mocap.cs.cmu.edu)). Then, we reproduced the same motion and ran the trajectory on a simulated humanoid.
+    To demonstrate that CNEP can model MP trajectories of higher dimensions just as easily, we trained a CNEP with a 56-dimensional trajectory of an actual stuntman realizing a cartwheel motion ( [CMU Mocap dataset](http://mocap.cs.cmu.edu/) ). Then, we reproduced the same motion and ran the trajectory on a simulated humanoid.
 </p>
 <p align="center">
 <img src="https://github.com/user-attachments/assets/218ae0ba-dbd2-40a3-99c0-fde6064166f3" width="400px"/>
