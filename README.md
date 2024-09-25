@@ -64,6 +64,14 @@ Here are some videos from this work: https://youtube.com/playlist?list=PLXWw0F-8
 <img src="https://github.com/user-attachments/assets/218ae0ba-dbd2-40a3-99c0-fde6064166f3" width="400px"/>
 </p>
 
+<hr>
+<p>
+    Comparison among DMP, Deep DMP and CNEP:
+</p>
+<p align="center">
+<img src="https://github.com/user-attachments/assets/5bf3c77f-ae6d-4a2e-aadd-83e923b9128c" width="400px"/>
+</p>
+
 ## Getting Started
 ### Requirements
 The entire project is developed with
