@@ -2,7 +2,11 @@
 
 This repository contains the source code for the paper "Conditional Neural Expert Processes for Learning Movement Primitives from Demonstration" by [Yigit Yildirim](https://www.cmpe.boun.edu.tr/~yigit.yildirim/) and [Emre Ugur](https://www.cmpe.boun.edu.tr/~emre). We both are members of the [CoLoRs Lab, Bogazici University](https://clrslab.wordpress.com/).
 
-CNEP is a novel deep learning architecture for Learning from Demonstration (LfD) in robotics aiming to encode diverse sensorimotor trajectories from demonstrations with varying movements, leveraging a novel gating mechanism, multiple decoders, and an entropy-based loss calculation to promote decoder specialization. This work has been submitted to the _IEEE RA-L_ for possible publication on **July 5, 2024**. You can find the preprint here: [https://arxiv.org/abs/2402.08424](https://arxiv.org/abs/2402.08424)
+CNEP is a novel deep learning architecture for Learning from Demonstration (LfD) in robotics aiming to encode diverse sensorimotor trajectories from demonstrations with varying movements, leveraging a novel gating mechanism, multiple decoders, and an entropy-based loss calculation to promote decoder specialization. This work is published in _IEEE RA-L_. For the full text, please refer to the publisher at [https://ieeexplore.ieee.org/abstract/document/10711283](https://ieeexplore.ieee.org/abstract/document/10711283). You can find the preprint here: [https://arxiv.org/abs/2402.08424](https://arxiv.org/abs/2402.08424) 
+
+You are welcome to use any portion of this study, but in that case, please consider citing:
+
+_Y. Yildirim and E. Ugur, "Conditional Neural Expert Processes for Learning Movement Primitives From Demonstration," in IEEE Robotics and Automation Letters, vol. 9, no. 12, pp. 10732-10739, Dec. 2024, doi: 10.1109/LRA.2024.3477169._
 
 ### Architecture overview:
 
@@ -89,4 +93,5 @@ However, most of the code should run cleanly with Python 3.8+ and Pytorch 2+. I 
     1. Files with .ipynb extension are good for inspection & visualization
     2. Files with .py extension are used to run the code on a remote server (an HPC, for example).
 
-If you use the code in your work, kindly consider citing https://arxiv.org/abs/2402.08424
+If you use the code in your work, kindly consider citing:
+Y. Yildirim and E. Ugur, "Conditional Neural Expert Processes for Learning Movement Primitives From Demonstration," in IEEE Robotics and Automation Letters, vol. 9, no. 12, pp. 10732-10739, Dec. 2024, doi: 10.1109/LRA.2024.3477169.
