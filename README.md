@@ -8,6 +8,18 @@ You are welcome to use any portion of this study, but in that case, please consi
 
 _Y. Yildirim and E. Ugur, "Conditional Neural Expert Processes for Learning Movement Primitives From Demonstration," in IEEE Robotics and Automation Letters, vol. 9, no. 12, pp. 10732-10739, Dec. 2024, doi: 10.1109/LRA.2024.3477169._
 
+> @ARTICLE{yildirim2024conditional,  
+  author={Yildirim, Yigit and Ugur, Emre},  
+  journal={IEEE Robotics and Automation Letters},  
+  title={Conditional Neural Expert Processes for Learning Movement Primitives From Demonstration},  
+  year={2024},  
+  volume={9},  
+  number={12},  
+  pages={10732-10739},  
+  keywords={Trajectory;Robots;Robot sensing systems;Hidden Markov models;Logic gates;Adaptation models;Training;Real-time systems;Probabilistic logic;Mathematical models;Learning from demonstration;deep learning methods;movement primitives},  
+  doi={10.1109/LRA.2024.3477169}  
+}
+
 ### Architecture overview:
 
 ![__over](https://github.com/yildirimyigit/cnep/assets/3774448/4147b4f6-f29c-499a-a119-a5fb31b10aae)
